@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-container": "#d32f39",
+            "primary": "#af0f24",
+            "on-surface": "#1a1c1c",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f3f3f3",
+            "surface-container-high": "#e8e8e8",
+            "surface": "#f9f9f9",
+            "secondary": "#5f5e5e",
+            "outline-variant": "#e4beba",
+            "error": "#ba1a1a",
+          },
+          "fontFamily": {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+          }
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400; }
+    .sidebar-motif { writing-mode: vertical-rl; transform: rotate(180deg); }
+    body { font-family: 'Inter', sans-serif; background-color: #f9f9f9; }
+    h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased pb-24">
+
+<!-- ============================================================ -->
+<!-- DIGITAL ID PAGE -->
+<!-- ============================================================ -->
+<header class="fixed top-0 w-full z-50 bg-[#f9f9f9] flex justify-between items-center px-6 h-16">
+  <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined text-[#af0f24]">menu</span>
+    <span class="tracking-tighter font-black text-[#af0f24] text-xl">IT&B HUB</span>
+  </div>
+  <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20 bg-gray-300"></div>
+</header>
+
+<main class="pt-20 px-4 max-w-md mx-auto">
+
+  <!-- Header Motif -->
+  <div class="flex items-end justify-between mb-8">
+    <div class="flex">
+      <div class="bg-primary w-2 h-16 mr-4"></div>
+      <div>
+        <p class="text-primary font-bold text-xs tracking-widest">ACADEMIC YEAR 2024/25</p>
+        <h1 class="text-3xl font-extrabold tracking-tight">Digital ID</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Digital ID Card -->
+  <div class="mb-10">
+    <div class="bg-surface-container-lowest p-6 shadow-[0px_4px_32px_rgba(175,15,36,0.04)] overflow-hidden">
+      <!-- Red Sidebar -->
+      <div class="flex gap-4 mb-6">
+        <div class="bg-primary w-1 flex-shrink-0"></div>
+        <div class="flex-1">
+          <p class="text-primary font-bold text-[10px] tracking-widest uppercase mb-2">Institution</p>
+          <h2 class="text-lg font-bold text-on-surface leading-tight">Institut Teknologi &<br/>Bisnis</h2>
+        </div>
+      </div>
+
+      <!-- Student Photo & Info -->
+      <div class="flex justify-center mb-6">
+        <div class="w-32 h-40 bg-gray-300 rounded border-2 border-on-surface/10 overflow-hidden">
+          <img src="https://via.placeholder.com/128x160?text=Photo" alt="Student Photo" class="w-full h-full object-cover"/>
+        </div>
+      </div>
+
+      <!-- Student Name -->
+      <div class="mb-6">
+        <p class="text-primary font-bold text-[10px] tracking-widest uppercase mb-2">Full Name</p>
+        <h3 class="text-xl font-bold text-on-surface">Alexander R.<br/>Vandenberg</h3>
+      </div>
+
+      <!-- Student ID & Department -->
+      <div class="grid grid-cols-2 gap-6 pb-6 border-b border-surface-container-high">
+        <div>
+          <p class="text-primary font-bold text-[10px] tracking-widest uppercase mb-1">Student ID</p>
+          <p class="text-on-surface font-bold">2024-8892-012</p>
+        </div>
+        <div>
+          <p class="text-primary font-bold text-[10px] tracking-widest uppercase mb-1">Department</p>
+          <p class="text-on-surface font-bold">Computer Science</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Wallet Integration -->
+  <div class="mb-10">
+    <p class="text-primary font-bold text-[10px] tracking-widest uppercase mb-4 text-center">Add to Mobile Wallet</p>
+    <div class="space-y-3">
+      <!-- Apple Wallet -->
+      <button class="w-full bg-on-background text-white p-4 flex items-center justify-center gap-3 hover:opacity-90 transition-opacity">
+        <span class="material-symbols-outlined">wallet</span>
+        <span class="font-bold">Save to Apple Wallet</span>
+      </button>
+      <!-- Google Pay -->
+      <button class="w-full bg-surface-container-lowest border border-surface-container-high text-on-surface p-4 flex items-center justify-center gap-3 hover:bg-surface-container-low transition-colors">
+        <span class="material-symbols-outlined">credit_card</span>
+        <span class="font-bold">Save to Google Pay</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Emergency Contact -->
+  <div class="mb-10">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-1 h-6 bg-primary"></div>
+      <p class="text-primary font-bold text-[10px] tracking-widest uppercase">Emergency Contact</p>
+    </div>
+    <div class="bg-surface-container-lowest p-4 flex items-center justify-between">
+      <div>
+        <p class="text-on-surface font-bold">Sarah Vandenberg</p>
+        <p class="text-secondary text-sm">Parent/Guardian</p>
+      </div>
+      <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">phone</span>
+    </div>
+  </div>
+
+  <!-- Library Access & Validity -->
+  <div class="grid grid-cols-2 gap-4 mb-10">
+    <!-- Library Access -->
+    <div class="bg-surface-container-lowest p-6 flex flex-col items-center justify-center text-center shadow-[0px_4px_32px_rgba(175,15,36,0.02)]">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+        <p class="text-on-surface font-bold">Lvl 3</p>
+      </div>
+      <p class="text-primary font-bold text-[10px] tracking-widest uppercase">Library Access</p>
+      <p class="text-on-surface text-xs mt-1 font-medium">Full Member</p>
+    </div>
+
+    <!-- Validity -->
+    <div class="bg-surface-container-lowest p-6 flex flex-col items-center justify-center text-center shadow-[0px_4px_32px_rgba(175,15,36,0.02)]">
+      <p class="text-secondary font-bold text-sm mb-1">Valid Until</p>
+      <p class="text-primary font-bold text-4xl">2028</p>
+      <p class="text-primary font-bold text-[10px] tracking-widest uppercase mt-1">AUG</p>
+    </div>
+  </div>
+
+  <!-- ID Card Features -->
+  <div class="mb-10">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-1 h-6 bg-primary"></div>
+      <p class="text-on-surface font-bold text-[10px] tracking-widest uppercase">Card Features</p>
+    </div>
+    <div class="space-y-2">
+      <div class="bg-surface-container-low p-4 flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary">check_circle</span>
+        <div>
+          <p class="font-bold text-on-surface text-sm">Digital Entry Access</p>
+          <p class="text-secondary text-xs">Tap on campus readers</p>
+        </div>
+      </div>
+      <div class="bg-surface-container-low p-4 flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary">check_circle</span>
+        <div>
+          <p class="font-bold text-on-surface text-sm">Library Check-out</p>
+          <p class="text-secondary text-xs">Activate in library kiosk</p>
+        </div>
+      </div>
+      <div class="bg-surface-container-low p-4 flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary">check_circle</span>
+        <div>
+          <p class="font-bold text-on-surface text-sm">Cafeteria Discounts</p>
+          <p class="text-secondary text-xs">Show digital ID for deals</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mb-10 space-y-3">
+    <button class="w-full bg-primary text-white p-4 font-bold text-center flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+      <span class="material-symbols-outlined">download</span>
+      Download Physical Card
+    </button>
+    <button class="w-full bg-surface-container-low text-on-surface p-4 font-bold text-center flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors">
+      <span class="material-symbols-outlined">share</span>
+      Share ID
+    </button>
+  </div>
+
+</main>
+
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full h-20 px-4 flex justify-around items-center pb-safe bg-white/80 backdrop-blur-md shadow-[0px_-4px_32px_rgba(175,15,36,0.04)] z-50">
+  <a class="flex flex-col items-center justify-center text-gray-400 opacity-60 hover:opacity-100 transition-opacity" href="#">
+    <span class="material-symbols-outlined">dashboard</span>
+    <span class="text-[10px] font-bold tracking-tight">Dashboard</span>
+  </a>
+  <a class="flex flex-col items-center justify-center text-[#af0f24] scale-110 transition-transform" href="#">
+    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">badge</span>
+    <span class="text-[10px] font-bold tracking-tight">ID</span>
+  </a>
+  <a class="flex flex-col items-center justify-center text-gray-400 opacity-60 hover:opacity-100 transition-opacity" href="#">
+    <span class="material-symbols-outlined">verified</span>
+    <span class="text-[10px] font-bold tracking-tight">Certificates</span>
+  </a>
+  <a class="flex flex-col items-center justify-center text-gray-400 opacity-60 hover:opacity-100 transition-opacity" href="#">
+    <span class="material-symbols-outlined">newspaper</span>
+    <span class="text-[10px] font-bold tracking-tight">News</span>
+  </a>
+  <a class="flex flex-col items-center justify-center text-gray-400 opacity-60 hover:opacity-100 transition-opacity" href="#">
+    <span class="material-symbols-outlined">sell</span>
+    <span class="text-[10px] font-bold tracking-tight">Perks</span>
+  </a>
+</nav>
+
+</body>
+</html>

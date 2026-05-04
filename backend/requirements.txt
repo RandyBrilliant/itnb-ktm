@@ -1,0 +1,33 @@
+asgiref==3.11.1
+Django==5.2.13
+sqlparse==0.5.5
+tzdata==2026.1
+
+# DRF & Authentication
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.3.1
+django-filter==24.1
+
+# Image & QR Code Generation
+Pillow==10.1.0
+qrcode==7.4.2
+
+# PDF Generation
+reportlab==4.0.9
+
+# Environment & Config
+django-environ==0.13.0
+
+# Async Tasks
+celery==5.3.4
+redis==5.0.1
+
+# WebSocket Support
+channels==4.0.0
+channels-redis==4.1.0
+daphne==4.0.0
+
+# Utilities
+python-dateutil==2.8.2
+requests==2.31.0

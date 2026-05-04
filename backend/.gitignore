@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# Environment and dependency directories
+env/
+.venv/
+venv/
+.env
+.env.*
+!env.example
+
+# Logs
+*.log
+logs/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Static asset builds
+staticfiles/
+static/
+
+# Production deployment files
+nginx/ssl/
+nginx/logs/
+
+# Celery
+celerybeat-schedule
+
+# Docker volumes (local development)
+postgres_data/
+redis_data/
+
+# IDE Python libraries
+lib/

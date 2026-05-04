@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>IT&B HUB - News & Events</title>
+    <!-- Fonts: Manrope for headlines, Inter for body -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+    <!-- Material Symbols Outlined -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#d32f39",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#636262",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "secondary": "#5f5e5e",
+                        "on-tertiary-fixed": "#1b1c1c",
+                        "tertiary": "#575858",
+                        "outline": "#8f6f6c",
+                        "on-tertiary-container": "#f6f5f4",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#e2dfde",
+                        "surface-container": "#eeeeee",
+                        "surface-container-lowest": "#ffffff",
+                        "on-background": "#1a1c1c",
+                        "on-primary-fixed-variant": "#930019",
+                        "primary-fixed": "#ffdad8",
+                        "primary": "#af0f24",
+                        "on-secondary-fixed-variant": "#474746",
+                        "inverse-primary": "#ffb3b0",
+                        "tertiary-fixed": "#e3e2e2",
+                        "surface-container-low": "#f3f3f3",
+                        "surface-dim": "#dadada",
+                        "outline-variant": "#e4beba",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#b91a2a",
+                        "inverse-surface": "#2f3131",
+                        "on-surface": "#1a1c1c",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#fff2f0",
+                        "inverse-on-surface": "#f1f1f1",
+                        "tertiary-fixed-dim": "#c7c6c6",
+                        "surface-bright": "#f9f9f9",
+                        "secondary-fixed": "#e5e2e1",
+                        "primary-fixed-dim": "#ffb3b0",
+                        "on-primary-fixed": "#410006",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e8e8e8",
+                        "surface": "#f9f9f9",
+                        "on-surface-variant": "#5b403d",
+                        "tertiary-container": "#707070",
+                        "background": "#f9f9f9",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#464747"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .brand-font { font-family: 'Manrope', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen pb-24">
+    <!-- TopAppBar -->
+    <header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#f9f9f9] dark:bg-[#1a1c1c] transition-colors">
+        <div class="flex items-center gap-4">
+            <span class="material-symbols-outlined text-primary cursor-pointer hover:bg-[#f3f3f3] p-2 transition-colors rounded-lg">menu</span>
+            <span class="tracking-tighter font-black text-[#af0f24] dark:text-[#d32f39] text-xl">IT&B HUB</span>
+        </div>
+        <div class="w-10 h-10 overflow-hidden rounded-full border-2 border-primary/10">
+            <img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCimajbZpZ1NaaGfCvY02fP8Cwpt17NBz6ic0cMC40nyd3SUVXb-naXBbzz_nVGrfnKLhJgaA--SWRwBVqmsxqt5a7q0Qgrew_pLjI0faB8gETuCA5VIB_i2ufdDyZszPKKlMpD5BDSwOzoWiMp7nlF9aj6boHzx9EjmDlihoT63uve6RmuWHJU7K6DPCGoWiMaDAFLQ1XpPFfYdRJKQ7ikFZqLbmnlPjsy2nSMsU-SB_DeSQ5B6EO3XSKMHEAQvMS1l0ZZ7W_xtgLW"/>
+        </div>
+    </header>
+
+    <main class="pt-20 px-4 max-w-md mx-auto">
+        <!-- Sidebar Motif Indicator (Hidden on small mobile, but implied by layout) -->
+        <div class="fixed left-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-r-full hidden md:block"></div>
+
+        <!-- Section Title -->
+        <div class="mb-8 mt-4 flex items-baseline gap-3">
+            <span class="text-primary font-black text-xs tracking-[0.2em] uppercase">NEWSFEED</span>
+            <h1 class="text-3xl font-extrabold tracking-tighter text-on-surface">Campus Bulletin</h1>
+        </div>
+
+        <!-- Featured Editorial Card -->
+        <section class="mb-10">
+            <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-surface-container-lowest shadow-[0px_-4px_32px_rgba(175,15,36,0.04)]">
+                <div class="aspect-[16/10] w-full overflow-hidden">
+                    <img alt="Featured" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiSII9g14niBpp39vdP_QiX2i2wqKd8ZagjXjfleRbkLqZaEptap-sgU6IQAgOret8tA49b--M0jZWoH-wKRG0U3vlYNuRVrXJD0xUao_FWBH2qXCTMmz4lSA7mo53p19JUH6PYUtdWuQYi_PicsmrqRzroz06t1gP5F79biWq7866MoYSX6gVAA7I6ze6OkFIH0cZMBOoQLLnGx7CJ0S1qoGwOsc1rl-qN6wc1DVdVXzVg5Z5A_t4JigkQ2peBtGrUjg9CjjUwwsK"/>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-primary-container text-on-primary-container text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider">Editorial</span>
+                        <span class="text-secondary text-xs font-medium uppercase tracking-tight">March 24, 2024</span>
+                    </div>
+                    <h2 class="text-2xl font-bold leading-tight mb-3 text-on-surface">The Future of Digital Finance: IT&B's New Fintech Initiative</h2>
+                    <p class="text-on-secondary-container text-sm leading-relaxed mb-4">An exclusive look into how our institution is shaping the next generation of financial technology leaders through strategic industry partnerships.</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-primary font-bold text-sm tracking-tight inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                            Read Full Article
+                            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Academic Calendar Section -->
+        <section class="mb-10">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold tracking-tight text-on-surface">Academic Calendar</h3>
+                <span class="text-primary text-xs font-bold uppercase tracking-widest cursor-pointer">View Month</span>
+            </div>
+            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1">
+                <!-- Date Card 1 (Active: Primary red border) -->
+                <div class="flex-shrink-0 w-24 bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center shadow-[0px_-4px_32px_rgba(175,15,36,0.04)] border-b-4 border-primary">
+                    <span class="text-primary text-xs font-bold uppercase">Mar</span>
+                    <span class="text-3xl font-black text-on-surface my-1">28</span>
+                    <span class="text-[10px] text-secondary font-medium uppercase">Mid-Term</span>
+                </div>
+                <!-- Date Card 2 -->
+                <div class="flex-shrink-0 w-24 bg-surface-container-low p-4 rounded-lg flex flex-col items-center">
+                    <span class="text-secondary text-xs font-bold uppercase">Apr</span>
+                    <span class="text-3xl font-black text-on-surface my-1">02</span>
+                    <span class="text-[10px] text-secondary font-medium uppercase">Workshop</span>
+                </div>
+                <!-- Date Card 3 -->
+                <div class="flex-shrink-0 w-24 bg-surface-container-low p-4 rounded-lg flex flex-col items-center">
+                    <span class="text-secondary text-xs font-bold uppercase">Apr</span>
+                    <span class="text-3xl font-black text-on-surface my-1">15</span>
+                    <span class="text-[10px] text-secondary font-medium uppercase">Reg. Day</span>
+                </div>
+                <!-- Date Card 4 -->
+                <div class="flex-shrink-0 w-24 bg-surface-container-low p-4 rounded-lg flex flex-col items-center">
+                    <span class="text-secondary text-xs font-bold uppercase">Apr</span>
+                    <span class="text-3xl font-black text-on-surface my-1">21</span>
+                    <span class="text-[10px] text-secondary font-medium uppercase">Holiday</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Latest Bulletins List -->
+        <section class="mb-8">
+            <h3 class="text-xl font-bold tracking-tight text-on-surface mb-6">Latest Bulletins</h3>
+            <div class="space-y-4">
+                <!-- Bulletin Item 1 -->
+                <div class="bg-surface-container-lowest p-4 rounded-lg flex gap-4 items-center group cursor-pointer hover:bg-surface-container-low transition-colors duration-200">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
+                        <img alt="Student life" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXTU_8Khj4WV7ymakevBm9P-m2kIgawq1zAK7rvD0GPtJqCtUCAS_j6O3gV4W8lkW6oYRoF7wKiUnn-4jnDVfl2jjfjC09pW5M9kMrcFT91iZ0xMFfTghhovTvpEUgnf5F_XMYG8IU4l3K7YW6OHXm432QqK9DjxGCeuct8yv9R_NR-9MuhdVAAxdGkZogbsNAqu1okSaVuJT3XaDUqQOwbwpgUnqcZReoSrGli1rVz-g54eQ0RLhSslWOn8q4EwIKXpEDkkuvF62I"/>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-primary text-[10px] font-bold uppercase tracking-widest mb-1 block">Campus Life</span>
+                        <h4 class="text-sm font-bold text-on-surface leading-snug">New Student Council Elections Phase 1 Begins This Friday</h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="material-symbols-outlined text-[10px] text-secondary">schedule</span>
+                            <span class="text-[10px] text-secondary uppercase font-medium">2 Hours Ago</span>
+                        </div>
+                    </div>
+                    <span class="material-symbols-outlined text-secondary opacity-30 group-hover:opacity-100 transition-opacity">chevron_right</span>
+                </div>
+
+                <!-- Bulletin Item 2 -->
+                <div class="bg-surface-container-lowest p-4 rounded-lg flex gap-4 items-center group cursor-pointer hover:bg-surface-container-low transition-colors duration-200">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
+                        <img alt="Technology" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArNYZfvLHyMvfY4FC1bio9tXL15sW3Dgp8BKJWKmNki3EDnanByEt2K_sd6wSRF70onVwDWznJxWm-3bUc1jYZFhISaPVM4bfiqph9STAiyydiIEpSnuzK5rZSoH0IGQ1uB2mfUyrAf8zdWSWH2g6VIG8j3RDHFR0w3bT0AkUQlpJipQ28wWLxS2CTWuVe1q9e1RhkM-JkivltUlMVkMpj061Z1tUUOj3W-cl4gCsMtFWO3qbYFrHZiiiHOgvfojZW76kSDGhTiLRC"/>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-primary text-[10px] font-bold uppercase tracking-widest mb-1 block">Academics</span>
+                        <h4 class="text-sm font-bold text-on-surface leading-snug">IT&B Hub Mobile App v2.4 Release Notes: New ID Card Features</h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="material-symbols-outlined text-[10px] text-secondary">schedule</span>
+                            <span class="text-[10px] text-secondary uppercase font-medium">Yesterday</span>
+                        </div>
+                    </div>
+                    <span class="material-symbols-outlined text-secondary opacity-30 group-hover:opacity-100 transition-opacity">chevron_right</span>
+                </div>
+
+                <!-- Bulletin Item 3 -->
+                <div class="bg-surface-container-lowest p-4 rounded-lg flex gap-4 items-center group cursor-pointer hover:bg-surface-container-low transition-colors duration-200">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
+                        <img alt="Events" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkFD3Rpu8M2upIvFw0C7Pvti-krfv82sFF_pWrweofpJa25ICWSdtZszPiizs8VeEHqdIUOMR_xy0A1WKgWMEuCTKMggepyFJx6oeeIo3niBVJME4emgpkE6nw7H_mXFj1GWKSj3B6pAHwwX9HuokzoAlaJZr4wWGVnT3C7RxVeFVhAADLJyoHfIXYQhKAkng6EJMUGXMKrrRJOqmhwAEHtB9fC56vlWuG_Cwx77MqgqIFvZah4JOSSoTw2svFT1hOmP03T-_lSFw8"/>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-primary text-[10px] font-bold uppercase tracking-widest mb-1 block">Events</span>
+                        <h4 class="text-sm font-bold text-on-surface leading-snug">Annual Career Fair 2024: Over 50 Global Companies Registered</h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="material-symbols-outlined text-[10px] text-secondary">schedule</span>
+                            <span class="text-[10px] text-secondary uppercase font-medium">Mar 22</span>
+                        </div>
+                    </div>
+                    <span class="material-symbols-outlined text-secondary opacity-30 group-hover:opacity-100 transition-opacity">chevron_right</span>
+                </div>
+            </div>
+
+            <!-- View All Button -->
+            <button class="w-full mt-6 py-4 bg-surface-container-high text-on-surface font-bold text-sm tracking-tight rounded hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2">
+                Archives
+                <span class="material-symbols-outlined text-sm">history</span>
+            </button>
+        </section>
+    </main>
+
+    <!-- BottomNavBar -->
+    <nav class="fixed bottom-0 left-0 w-full h-20 px-4 flex justify-around items-center pb-safe bg-white/80 dark:bg-[#1a1c1c]/80 backdrop-blur-md shadow-[0px_-4px_32px_rgba(175,15,36,0.04)] z-50">
+        <a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60 hover:opacity-100 transition-opacity" href="#">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="text-[10px] font-bold tracking-tight mt-1">Dashboard</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60 hover:opacity-100 transition-opacity" href="#">
+            <span class="material-symbols-outlined">badge</span>
+            <span class="text-[10px] font-bold tracking-tight mt-1">ID</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60 hover:opacity-100 transition-opacity" href="#">
+            <span class="material-symbols-outlined">verified</span>
+            <span class="text-[10px] font-bold tracking-tight mt-1">Certificates</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-[#af0f24] dark:text-[#d32f39] scale-110 transition-transform" href="#">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">newspaper</span>
+            <span class="text-[10px] font-bold tracking-tight mt-1">News</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 opacity-60 hover:opacity-100 transition-opacity" href="#">
+            <span class="material-symbols-outlined">sell</span>
+            <span class="text-[10px] font-bold tracking-tight mt-1">Perks</span>
+        </a>
+    </nav>
+</body>
+</html>
