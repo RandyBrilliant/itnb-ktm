@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { listPosts } from "@/api/posts"
+import { COVER_IMAGE_SPEC } from "@/lib/media-guidelines"
 import type { UserRole } from "@/types/auth"
 import { getRoleBasePath } from "@/lib/role-path"
 import { resolveMediaUrl } from "@/lib/media-url"
@@ -17,46 +18,79 @@ export function NewsPage({ role }: { role: UserRole }) {
   const [page, setPage] = useState(1)
   const { data, isLoading } = useQuery({
     queryKey: [role, "news-posts", page],
-    queryFn: () => listPosts(page),
+    queryFn: () => listPosts({ page }),
   })
 
   const posts = data?.results ?? []
   const basePath = getRoleBasePath(role)
 
   return (
-    <RoleContentLayout role={role} title="Campus News">
-      <section className="space-y-5">
+    <RoleContentLayout
+      role={role}
+      title="Campus News"
+      subtitle="Stories, announcements, and academic updates"
+      maxWidthClassName="max-w-3xl"
+    >
+      <section className="space-y-6">
+        <div className="rounded-2xl border border-[#ececec] bg-gradient-to-br from-white to-[#fafafa] px-5 py-4 shadow-[0_1px_0_rgba(175,15,36,0.06)]">
+          <p className="text-sm leading-relaxed text-[#5f5e5e]">
+            Official updates from IT&amp;B. Cover images are published in{" "}
+            <span className="font-semibold text-[#1a1c1c]">{COVER_IMAGE_SPEC.aspectRatio}</span> format for a
+            consistent reading experience across devices.
+          </p>
+        </div>
+
         {isLoading ? (
-          <div className="space-y-3">
-            <div className="h-48 animate-pulse rounded-2xl bg-[#ececec]" />
-            <div className="h-28 animate-pulse rounded-2xl bg-[#ececec]" />
+          <div className="space-y-4">
+            <div className="aspect-video animate-pulse rounded-2xl bg-[#ececec]" />
+            <div className="aspect-video animate-pulse rounded-2xl bg-[#ececec]" />
           </div>
         ) : posts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#e4beba] bg-white p-8 text-center">
-            <p className="text-lg font-bold text-[#1a1c1c]">No news yet</p>
+          <div className="rounded-2xl border border-dashed border-[#e4beba] bg-white px-6 py-12 text-center">
+            <p className="font-[var(--font-heading)] text-lg font-bold text-[#1a1c1c]">No news yet</p>
+            <p className="mt-2 text-sm text-[#5f5e5e]">Check back soon for new announcements.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-5">
             {posts.map((post) => {
               const image = resolveMediaUrl(post.image) || post.image_url || ""
               return (
-                <article key={post.id} className="overflow-hidden rounded-2xl border border-[#ececec] bg-white">
-                  {image ? <img src={image} alt={post.title} className="h-52 w-full object-cover" /> : null}
-                  <div className="p-5">
-                    <span className="rounded-full bg-[#af0f24]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#af0f24]">
-                      {post.category_display || post.category}
-                    </span>
-                    <h2 className="mt-3 text-2xl font-extrabold text-[#1a1c1c]">{post.title}</h2>
-                    <p className="mt-2 line-clamp-3 text-sm text-[#5f5e5e]">{post.body}</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#af0f24]">
+                <article
+                  key={post.id}
+                  className="group overflow-hidden rounded-2xl border border-[#ececec] bg-white shadow-sm transition hover:border-[#e0d5d3] hover:shadow-md"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden bg-[#f0f0f0]">
+                    {image ? (
+                      <img
+                        src={image}
+                        alt={post.title}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#f7f7f7] to-[#ececec]">
+                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#b5b5b5]">No cover</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5 sm:p-6">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-[#af0f24]/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#af0f24]">
+                        {post.category_display || post.category}
+                      </span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8a8989]">
                         {formatDate(post.published_at)}
-                      </p>
+                      </span>
+                    </div>
+                    <h2 className="font-[var(--font-heading)] mt-3 text-xl font-extrabold tracking-tight text-[#1a1c1c] sm:text-2xl">
+                      {post.title}
+                    </h2>
+                    <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[#5f5e5e]">{post.body}</p>
+                    <div className="mt-5">
                       <Link
                         to={`${basePath}/news/${post.id}`}
-                        className="rounded-lg border border-[#ddd] px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#1a1c1c]"
+                        className="inline-flex items-center rounded-lg bg-[#af0f24] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-white transition hover:bg-[#930019]"
                       >
-                        Read More
+                        Read article
                       </Link>
                     </div>
                   </div>
@@ -70,4 +104,3 @@ export function NewsPage({ role }: { role: UserRole }) {
     </RoleContentLayout>
   )
 }
-

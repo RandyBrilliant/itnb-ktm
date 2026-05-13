@@ -4,19 +4,24 @@ import { Menu, X } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { toast } from "@/lib/toast"
+import { isAdminSectionActive } from "@/lib/admin-nav-active"
 
 type MenuItem = {
   title: string
   href: string
   icon: string
+  /** Only highlight on exact path (e.g. dashboard). Omit to include /new, /:id/edit under the same section. */
+  exact?: boolean
 }
 
 const primaryMenuItems: MenuItem[] = [
-  { title: "Dashboard", href: "/admin/dashboard", icon: "dashboard" },
-  { title: "Student Records", href: "/admin/users", icon: "person_book" },
+  { title: "Dashboard", href: "/admin/dashboard", icon: "dashboard", exact: true },
+  { title: "Student Records", href: "/admin/users", icon: "person_book", exact: true },
+  { title: "Administrator Records", href: "/admin/users/admins", icon: "shield_person" },
+  { title: "Staff Records", href: "/admin/users/staff", icon: "badge" },
+  { title: "Lecturer Records", href: "/admin/users/lecturers", icon: "school" },
   { title: "Certificates", href: "/admin/certificates", icon: "verified_user" },
-  { title: "Attendance", href: "/admin/events", icon: "event_available" },
-  { title: "Course Material", href: "/admin/benefits", icon: "library_books" },
+  { title: "Student Benefits", href: "/admin/benefits", icon: "sell" },
   { title: "Campus News", href: "/admin/posts", icon: "newspaper" },
 ]
 
@@ -25,6 +30,7 @@ export function AdminSidebar() {
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const handleLogout = async () => {
     if (isLoggingOut) return
@@ -36,8 +42,12 @@ export function AdminSidebar() {
       toast.error("Logout failed", getUserFriendlyError(error, "logout"))
     } finally {
       setIsLoggingOut(false)
+      setShowLogoutModal(false)
     }
   }
+
+  const isProfileActive =
+    location.pathname === "/admin/profile" || location.pathname === "/admin/change-password"
 
   return (
     <>
@@ -74,7 +84,7 @@ export function AdminSidebar() {
 
         <nav className="flex-1 space-y-1 px-4">
           {primaryMenuItems.map((item) => {
-            const isActive = location.pathname === item.href
+            const isActive = isAdminSectionActive(location.pathname, item.href, item.exact)
             return (
               <Link
                 key={item.href}
@@ -94,24 +104,61 @@ export function AdminSidebar() {
         </nav>
 
         <div className="mt-auto space-y-1 px-4 pt-8">
-          <button
-            type="button"
-            className="flex w-full items-center gap-3 rounded-sm px-4 py-3 text-white/80 transition-all duration-200 hover:bg-[#d32f39]/50 hover:text-white"
+          <Link
+            to="/admin/profile"
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 rounded-sm px-4 py-3 transition-all duration-200 ${
+              isProfileActive
+                ? "bg-[#d32f39] font-bold text-white"
+                : "text-white/80 hover:bg-[#d32f39]/50 hover:text-white"
+            }`}
           >
-            <span className="material-symbols-outlined text-[20px]">help</span>
-            <span>Help Center</span>
-          </button>
+            <span className="material-symbols-outlined text-[20px]">person</span>
+            <span>Profile</span>
+          </Link>
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
             disabled={isLoggingOut}
             className="flex w-full items-center gap-3 rounded-sm px-4 py-3 text-white/80 transition-all duration-200 hover:bg-[#d32f39]/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
           >
             <span className="material-symbols-outlined text-[20px]">logout</span>
-            <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-sm rounded-sm border border-[#e2e2e2] bg-white p-6 shadow-xl">
+            <h2 className="font-[var(--font-heading)] text-xl font-bold text-[#1a1c1c]">
+              Confirm Logout
+            </h2>
+            <p className="mt-2 text-sm text-[#5f5e5e]">
+              Are you sure you want to log out of your current session?
+            </p>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                className="rounded-sm border border-[#d5d5d5] px-4 py-2 text-sm font-semibold text-[#1a1c1c] transition hover:bg-[#f5f5f5] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="rounded-sm bg-[#af0f24] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#930019] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isLoggingOut ? "Logging out..." : "Yes, Log out"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

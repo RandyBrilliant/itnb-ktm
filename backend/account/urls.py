@@ -27,6 +27,7 @@ router.register(r"cards", views.DigitalCardViewSet, basename="digital-card")
 
 # Custom paths (outside router)
 urlpatterns = [
+    path("users/import-students/", views.StudentImportView.as_view(), name="student-import"),
     # Auth endpoints
     path("auth/me/", views.MeView.as_view(), name="auth-me"),
     path("auth/logout/", views.LogoutView.as_view(), name="auth-logout"),

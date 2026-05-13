@@ -143,7 +143,7 @@ python manage.py createsuperuser
 # Password: (set a strong password)
 
 # Create test data (optional)
-python manage.py seed_data
+python manage.py seed_demo_data
 ```
 
 ### 5. Start Development Server

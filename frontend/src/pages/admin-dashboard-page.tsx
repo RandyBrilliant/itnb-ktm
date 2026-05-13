@@ -1,134 +1,222 @@
-import { useUsersQuery } from "@/hooks/use-users-query"
+import { Link } from "react-router-dom"
+import { ArrowRight, Plus } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 import { AdminStatCard } from "@/components/admin/admin-stat-card"
 import { AdminQuickAction } from "@/components/admin/admin-quick-action"
-import { AdminScheduleTable, type AdminScheduleItem } from "@/components/admin/admin-schedule-table"
-import { toast } from "@/lib/toast"
+import { useAdminDashboardStats, useAdminRecentPosts } from "@/hooks/use-admin-dashboard-stats"
+
+function formatShortDate(iso?: string) {
+  if (!iso) return "—"
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return "—"
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+}
+
+function previewText(raw: string, max = 140) {
+  const plain = raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+  if (plain.length <= max) return plain
+  return `${plain.slice(0, max)}…`
+}
 
 export function AdminDashboardPage() {
-  const { data: usersData } = useUsersQuery({
-    page: 1,
-    page_size: 1,
-  })
+  const { user } = useAuth()
+  const {
+    studentCount,
+    postsCount,
+    benefitsCount,
+    programsCount,
+    isLoading: statsLoading,
+    hasError,
+  } = useAdminDashboardStats()
+  const { data: recentPosts, isLoading: postsLoading } = useAdminRecentPosts()
 
-  const scheduleItems: AdminScheduleItem[] = [
-    {
-      time: "09:00 - 11:30",
-      session: "Morning Session",
-      module: "Advanced Corporate Finance",
-      batch: "Semester 4 • Batch A",
-      venue: "Room 402, Block B",
-      status: "COMPLETED",
-    },
-    {
-      time: "13:00 - 15:30",
-      session: "Current Session",
-      module: "Strategic Risk Management",
-      batch: "Masters • Executive",
-      venue: "Main Auditorium",
-      status: "IN PROGRESS",
-    },
-    {
-      time: "16:00 - 18:00",
-      session: "Evening Session",
-      module: "Digital Marketing Ethics",
-      batch: "Semester 2 • Batch C",
-      venue: "Seminar Room 1",
-      status: "SCHEDULED",
-    },
-  ]
+  const displayCount = (n: number | null) => {
+    if (statsLoading && n === null) return "…"
+    if (hasError && n === null) return "—"
+    return String(n ?? 0)
+  }
+
+  const featured = recentPosts?.results?.[0]
+  const rows = recentPosts?.results ?? []
+
+  const greeting = user?.full_name?.trim() || user?.email || "there"
 
   return (
     <div className="space-y-10">
-      <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-        <div>
-          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-[#af0f24]">
-            Institutional Dashboard
-          </span>
+      <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#af0f24]">Institutional dashboard</span>
           <h1 className="font-[var(--font-heading)] text-4xl font-extrabold tracking-tight text-[#1a1c1c] md:text-5xl">
-            At a Glance.
+            Welcome back, {greeting.split(" ")[0]}.
           </h1>
+          <p className="max-w-xl text-sm leading-relaxed text-[#5f5e5e]">
+            Live counts from your hub: student accounts, campus news, benefits, and certificate programs.
+          </p>
         </div>
-        <button className="flex items-center gap-2 self-start bg-[#af0f24] px-8 py-3 font-bold text-white shadow-lg transition hover:bg-[#930019] md:self-auto">
-          <span className="material-symbols-outlined text-base">add</span>
-          CREATE RECORD
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to="/admin/posts/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#af0f24] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(175,15,36,0.25)] transition hover:bg-[#930019]"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+            New post
+          </Link>
+          <Link
+            to="/admin/users"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#d5d5d5] bg-white px-6 py-3 text-sm font-bold text-[#1a1c1c] transition hover:bg-[#f5f5f5]"
+          >
+            Student records
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
-          title="Active Enrollment"
-          icon="groups"
-          value={String(usersData?.count ?? 0)}
-          hint="+12% from last semester"
+          title="Student records"
+          icon="school"
+          value={displayCount(studentCount)}
+          hint="Accounts with role Student"
           accent="success"
         />
         <AdminStatCard
-          title="Pending Approval"
-          icon="task_alt"
-          value="24"
-          hint="Priority high • certificates awaiting signature"
-          accent="warning"
+          title="Campus news"
+          icon="newspaper"
+          value={displayCount(postsCount)}
+          hint="Posts in the news module"
+          accent="neutral"
         />
         <AdminStatCard
-          title="Upcoming Classes"
-          icon="schedule"
-          value="03"
-          hint="Next session in 45 mins"
+          title="Active benefits"
+          icon="sell"
+          value={displayCount(benefitsCount)}
+          hint="Benefits marked active"
+          accent="neutral"
+        />
+        <AdminStatCard
+          title="Certificate programs"
+          icon="verified_user"
+          value={displayCount(programsCount)}
+          hint="Programs configured for issuance"
+          accent="neutral"
         />
       </section>
 
       <section className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="space-y-6 lg:col-span-4">
+        <div className="space-y-5 lg:col-span-4">
           <div className="border-l-4 border-[#af0f24] pl-4">
-            <h2 className="font-[var(--font-heading)] text-xl font-bold uppercase tracking-tight">Quick Actions</h2>
-            <p className="text-sm text-[#5f5e5e]">Operational shortcuts</p>
+            <h2 className="font-[var(--font-heading)] text-xl font-bold uppercase tracking-tight">Quick links</h2>
+            <p className="text-sm text-[#5f5e5e]">Jump to common admin tasks</p>
           </div>
 
           <div className="space-y-3">
-            <AdminQuickAction title="Verify Student ID" icon="id_card" onClick={() => toast.info("Open Verify Student ID module")} />
-            <AdminQuickAction title="Issue Certificate" icon="workspace_premium" onClick={() => toast.info("Open Issue Certificate flow")} />
-            <AdminQuickAction title="Post News Update" icon="campaign" onClick={() => toast.info("Open News composer")} />
+            <AdminQuickAction title="Student Records & import" icon="person_book" href="/admin/users" />
+            <AdminQuickAction title="Campus News" icon="newspaper" href="/admin/posts" />
+            <AdminQuickAction title="Student Benefits" icon="sell" href="/admin/benefits" />
+            <AdminQuickAction title="Certificates" icon="workspace_premium" href="/admin/certificates" />
           </div>
 
-          <div className="relative overflow-hidden rounded-sm bg-[#af0f24] p-8 text-white">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">Institutional Note</span>
-            <h3 className="mt-2 font-[var(--font-heading)] text-xl font-bold leading-tight">
-              Faculty Meeting: Curriculum Review 2024
-            </h3>
-            <p className="mt-3 text-sm text-white/80">
-              Attendance is mandatory for all senior lecturers regarding the new digital transformation syllabus.
-            </p>
-            <button className="mt-5 border-b border-white/60 pb-1 text-xs font-bold">READ MORE</button>
-            <span className="material-symbols-outlined absolute -bottom-8 -right-8 text-[120px] text-white/10">
-              school
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-[#af0f24] to-[#8b0c22] p-8 text-white shadow-[0_16px_40px_rgba(175,15,36,0.35)]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">Spotlight</span>
+            {featured ? (
+              <>
+                <h3 className="mt-3 font-[var(--font-heading)] text-lg font-bold leading-snug">{featured.title}</h3>
+                <p className="mt-2 line-clamp-3 text-sm text-white/85">{previewText(featured.body)}</p>
+                <Link
+                  to={`/admin/posts/${featured.id}/edit`}
+                  className="mt-5 inline-flex items-center gap-1 border-b border-white/70 pb-0.5 text-xs font-bold uppercase tracking-wider text-white transition hover:border-white"
+                >
+                  Edit post
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <h3 className="mt-3 font-[var(--font-heading)] text-lg font-bold leading-snug">Publish campus news</h3>
+                <p className="mt-2 text-sm text-white/85">
+                  No posts yet or still loading. Share announcements with students from one place.
+                </p>
+                <Link
+                  to="/admin/posts/new"
+                  className="mt-5 inline-flex items-center gap-1 border-b border-white/70 pb-0.5 text-xs font-bold uppercase tracking-wider text-white"
+                >
+                  Create first post
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </>
+            )}
+            <span className="material-symbols-outlined pointer-events-none absolute -bottom-6 -right-4 text-[100px] text-white/10">
+              campaign
             </span>
           </div>
         </div>
 
         <div className="lg:col-span-8">
-          <div className="overflow-hidden rounded-sm bg-white shadow-[32px_0_32px_rgba(175,15,36,0.04)]">
-            <div className="flex items-center justify-between border-b border-[#ececec] bg-[#f9f9f9] px-8 py-6">
-              <div className="flex items-center gap-4">
-                <h2 className="font-[var(--font-heading)] text-2xl font-bold">Today's Schedule</h2>
-                <span className="rounded-full bg-[#af0f24]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#af0f24]">
-                  Oct 24, 2023
-                </span>
+          <div className="overflow-hidden rounded-xl border border-[#ececec] bg-white shadow-[0_24px_48px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#ececec] bg-[#fafafa] px-6 py-5 sm:px-8">
+              <div>
+                <h2 className="font-[var(--font-heading)] text-xl font-bold text-[#1a1c1c]">Latest campus news</h2>
+                <p className="text-sm text-[#5f5e5e]">Most recently updated posts</p>
               </div>
-              <div className="flex gap-2">
-                <button className="rounded-full p-1.5 transition hover:bg-[#ececec]">
-                  <span className="material-symbols-outlined text-base">chevron_left</span>
-                </button>
-                <button className="rounded-full p-1.5 transition hover:bg-[#ececec]">
-                  <span className="material-symbols-outlined text-base">chevron_right</span>
-                </button>
+              <Link
+                to="/admin/posts"
+                className="text-xs font-bold uppercase tracking-[0.12em] text-[#af0f24] transition hover:underline"
+              >
+                View all
+              </Link>
+            </div>
+
+            {postsLoading ? (
+              <div className="p-12 text-center text-sm text-[#5f5e5e]">Loading posts…</div>
+            ) : rows.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-sm text-[#5f5e5e]">No posts yet.</p>
+                <Link to="/admin/posts/new" className="mt-4 inline-block text-sm font-bold text-[#af0f24]">
+                  Create a post
+                </Link>
               </div>
-            </div>
-            <AdminScheduleTable items={scheduleItems} />
-            <div className="bg-[#f9f9f9] p-6 text-center">
-              <button className="text-xs font-bold uppercase tracking-[0.14em] text-[#af0f24] transition hover:underline">
-                View Weekly Calendar
-              </button>
-            </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-[#ececec] bg-[#f9f9f9]">
+                    <tr>
+                      <th className="px-6 py-3 font-semibold text-[#1a1c1c] sm:px-8">Title</th>
+                      <th className="hidden py-3 font-semibold text-[#1a1c1c] md:table-cell">Category</th>
+                      <th className="hidden py-3 font-semibold text-[#1a1c1c] lg:table-cell">Updated</th>
+                      <th className="px-6 py-3 text-right font-semibold text-[#1a1c1c] sm:px-8"> </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f0f0f0]">
+                    {rows.map((post) => (
+                      <tr key={post.id} className="transition-colors hover:bg-[#fafafa]">
+                        <td className="max-w-[240px] px-6 py-4 sm:max-w-none sm:px-8">
+                          <p className="font-semibold text-[#1a1c1c]">{post.title}</p>
+                          <p className="mt-0.5 line-clamp-1 text-xs text-[#7a736f] md:hidden">
+                            {post.category_display ?? post.category}
+                          </p>
+                        </td>
+                        <td className="hidden py-4 md:table-cell">
+                          <span className="inline-flex rounded-full bg-[#af0f24]/10 px-2.5 py-0.5 text-xs font-semibold text-[#af0f24]">
+                            {post.category_display ?? post.category}
+                          </span>
+                        </td>
+                        <td className="hidden py-4 text-[#5f5e5e] lg:table-cell">
+                          {formatShortDate(post.updated_at ?? post.published_at)}
+                        </td>
+                        <td className="px-6 py-4 text-right sm:px-8">
+                          <Link
+                            to={`/admin/posts/${post.id}/edit`}
+                            className="text-xs font-bold uppercase tracking-wide text-[#af0f24] hover:underline"
+                          >
+                            Edit
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </section>

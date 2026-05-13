@@ -12,6 +12,16 @@ export const api = axios.create({
   },
 })
 
+const getLoginRedirectPath = (): string => {
+  const pathname = window.location.pathname
+  return pathname.startsWith("/admin") ? "/admin/login" : "/login"
+}
+
+const clearStoredTokens = () => {
+  localStorage.removeItem("access_token")
+  localStorage.removeItem("refresh_token")
+}
+
 // ---------------------------------------------------------------------------
 // Automatic token refresh interceptor
 // ---------------------------------------------------------------------------
@@ -88,10 +98,9 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch (err) {
         processQueue(err as AxiosError)
-        // Token refresh failed - clear auth and redirect to login
-        localStorage.removeItem("access_token")
-        localStorage.removeItem("refresh_token")
-        window.location.href = "/login"
+        // Token refresh failed - clear auth and route to the appropriate login page.
+        clearStoredTokens()
+        window.location.replace(getLoginRedirectPath())
         return Promise.reject(err)
       }
     }
@@ -102,9 +111,20 @@ api.interceptors.response.use(
 
 // Request interceptor to add token to headers
 api.interceptors.request.use((config) => {
+  // Default axios Content-Type is application/json; FormData must use multipart boundary.
+  if (config.data instanceof FormData) {
+    const headers = config.headers
+    if (headers && typeof headers.delete === "function") {
+      headers.delete("Content-Type")
+    } else if (headers && typeof headers === "object") {
+      delete (headers as Record<string, unknown>)["Content-Type"]
+    }
+  }
   const token = localStorage.getItem("access_token")
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  } else if (config.headers?.Authorization) {
+    delete config.headers.Authorization
   }
   return config
 })

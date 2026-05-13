@@ -32,6 +32,15 @@ export function CertificateDetailPage({ role }: { role: UserRole }) {
           <>
             {data.image_url ? <img src={data.image_url} alt={data.title} className="h-64 w-full rounded-xl object-cover" /> : null}
             <h1 className="text-3xl font-extrabold text-[#1a1c1c]">{data.title}</h1>
+            {(data.recipient_name || data.recipient_id_display) && (
+              <div className="rounded-xl border border-[#ececec] bg-[#fafafa] px-4 py-3 text-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a8a8a]">Awarded to</p>
+                <p className="mt-1 text-lg font-bold text-[#1a1c1c]">{data.recipient_name || "—"}</p>
+                {data.recipient_id_display ? (
+                  <p className="mt-0.5 font-mono text-sm text-[#5f5e5e]">{data.recipient_id_display}</p>
+                ) : null}
+              </div>
+            )}
             <p className="whitespace-pre-line text-sm leading-relaxed text-[#3b3b3b]">{data.description || "No description available."}</p>
             <div className="grid grid-cols-1 gap-2 text-sm text-[#5f5e5e] sm:grid-cols-2">
               <p>Issued: {formatDate(data.issued_date)}</p>

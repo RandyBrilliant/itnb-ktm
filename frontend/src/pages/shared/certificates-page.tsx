@@ -2,8 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { type UserRole } from "@/types/auth"
-import { type CertificateItem, getCertificateDownloadUrl, listCertificates } from "@/api/certificates"
-import { resolveMediaUrl } from "@/lib/media-url"
+import { type CertificateItem, listCertificates, openCertificatePdfInNewTab } from "@/api/certificates"
 import { toast } from "@/lib/toast"
 import { getRoleBasePath } from "@/lib/role-path"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
@@ -32,16 +31,10 @@ export function CertificatesPage({ role }: { role: UserRole }) {
   const handleDownload = async (cert: CertificateItem) => {
     try {
       setDownloadingId(cert.id)
-      const endpointUrl = await getCertificateDownloadUrl(cert.id)
-      const directPdf = resolveMediaUrl(cert.pdf_file)
-      const finalUrl = resolveMediaUrl(endpointUrl) || directPdf
-      if (!finalUrl) {
-        toast.error("Download unavailable", "Certificate file is not ready yet.")
-        return
-      }
-      window.open(finalUrl, "_blank", "noopener,noreferrer")
-    } catch {
-      toast.error("Download failed", "Unable to download certificate right now.")
+      await openCertificatePdfInNewTab(cert.id)
+    } catch (error) {
+      const msg = error instanceof Error && error.message === "Popup blocked" ? "Allow pop-ups for this site." : "Unable to open certificate right now."
+      toast.error("Download failed", msg)
     } finally {
       setDownloadingId(null)
     }
@@ -70,6 +63,9 @@ export function CertificatesPage({ role }: { role: UserRole }) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-lg font-bold text-[#1a1c1c]">{cert.title}</p>
+                      {cert.recipient_name ? (
+                        <p className="mt-0.5 text-sm font-semibold text-[#3b3b3b]">{cert.recipient_name}</p>
+                      ) : null}
                       <p className="mt-1 text-sm text-[#5f5e5e]">{cert.description || "Official academic certificate"}</p>
                     </div>
                     <span className="rounded-full bg-[#af0f24]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#af0f24]">

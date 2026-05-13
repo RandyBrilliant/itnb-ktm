@@ -125,7 +125,7 @@ class IsBackofficeRole(permissions.BasePermission):
 
 
 class CanIssueCertificates(permissions.BasePermission):
-    """Only Staff with can_issue_certificates permission."""
+    """Admin (portal), superuser, or Staff with can_issue_certificates."""
     
     message = ApiMessage.PERMISSION_DENIED
 
@@ -133,7 +133,7 @@ class CanIssueCertificates(permissions.BasePermission):
         if not (request.user and request.user.is_authenticated):
             return False
         
-        if request.user.is_superuser:
+        if request.user.is_superuser or user_is_admin(request.user):
             return True
         
         if not user_is_staff(request.user):
@@ -142,30 +142,33 @@ class CanIssueCertificates(permissions.BasePermission):
         try:
             staff_profile = request.user.staff_profile
             return staff_profile.can_issue_certificates
-        except:
+        except Exception:
             return False
+
+
+def user_can_manage_benefits(user) -> bool:
+    """True for superuser, Admin role, or Staff with can_manage_benefits."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if user_is_admin(user):
+        return True
+    if not user_is_staff(user):
+        return False
+    try:
+        return user.staff_profile.can_manage_benefits
+    except Exception:
+        return False
 
 
 class CanManageBenefits(permissions.BasePermission):
-    """Only Staff with can_manage_benefits permission."""
-    
+    """Admin, superuser, or Staff with can_manage_benefits."""
+
     message = ApiMessage.PERMISSION_DENIED
 
     def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        
-        if request.user.is_superuser:
-            return True
-        
-        if not user_is_staff(request.user):
-            return False
-        
-        try:
-            staff_profile = request.user.staff_profile
-            return staff_profile.can_manage_benefits
-        except:
-            return False
+        return user_can_manage_benefits(request.user)
 
 
 class CanPostNews(permissions.BasePermission):
@@ -178,6 +181,10 @@ class CanPostNews(permissions.BasePermission):
             return False
         
         if request.user.is_superuser:
+            return True
+
+        # Admin can post and manage news content.
+        if user_is_admin(request.user):
             return True
         
         # Lecturers with permission

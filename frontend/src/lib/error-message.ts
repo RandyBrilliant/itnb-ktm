@@ -3,6 +3,7 @@ type ErrorContext =
   | "admin-login"
   | "forgot-password"
   | "reset-password"
+  | "change-password"
   | "logout"
   | "user-status"
   | "generic"
@@ -14,15 +15,38 @@ interface ApiErrorShape {
       detail?: string
       code?: string
       errors?: Record<string, string[]>
-    }
+    } & Record<string, unknown>
   }
   message?: string
 }
 
-function getFieldError(errors?: Record<string, string[]>): string | null {
-  if (!errors) return null
-  const first = Object.values(errors)[0]?.[0]
-  return first || null
+function pickFirstErrorMessage(value: unknown): string | null {
+  if (typeof value === "string") return value
+  if (Array.isArray(value)) {
+    const first = value[0]
+    return typeof first === "string" ? first : null
+  }
+  return null
+}
+
+function getFieldError(data?: ApiErrorShape["response"]["data"]): string | null {
+  if (!data) return null
+
+  const fromErrors = data.errors
+  if (fromErrors) {
+    const nestedFirst = Object.values(fromErrors)[0]
+    const nestedMessage = pickFirstErrorMessage(nestedFirst)
+    if (nestedMessage) return nestedMessage
+  }
+
+  // Support raw DRF field errors shape, e.g. { current_password: ["..."] }.
+  for (const [key, value] of Object.entries(data)) {
+    if (key === "detail" || key === "code" || key === "errors") continue
+    const message = pickFirstErrorMessage(value)
+    if (message) return message
+  }
+
+  return null
 }
 
 export function getUserFriendlyError(
@@ -33,7 +57,7 @@ export function getUserFriendlyError(
   const status = error.response?.status
   const code = error.response?.data?.code
   const detail = error.response?.data?.detail
-  const fieldError = getFieldError(error.response?.data?.errors)
+  const fieldError = getFieldError(error.response?.data)
   const rawMessage = detail || fieldError || error.message || ""
   const normalized = rawMessage.toLowerCase()
 
@@ -71,6 +95,13 @@ export function getUserFriendlyError(
     if (status === 400) {
       return fieldError || "Please check your password requirements and try again."
     }
+  }
+
+  if (context === "change-password" && status === 400) {
+    return (
+      fieldError ||
+      "Unable to change password. Please verify your current password and confirm the new password."
+    )
   }
 
   if (context === "logout") {

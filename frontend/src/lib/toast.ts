@@ -17,7 +17,12 @@ export const toast = {
     })
   },
   info: (title: string, description?: string) => {
-    sonnerToast(title, {
+    sonnerToast.info(title, {
+      description,
+    })
+  },
+  warning: (title: string, description?: string) => {
+    sonnerToast.warning(title, {
       description,
     })
   },

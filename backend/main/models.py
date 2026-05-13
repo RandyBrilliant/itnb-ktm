@@ -36,14 +36,83 @@ class NotificationPriority(models.TextChoices):
     URGENT = "URGENT", _("Mendesak")
 
 
+class CertificateProgramBatchStatus(models.TextChoices):
+    PENDING = "PENDING", _("Pending")
+    PROCESSING = "PROCESSING", _("Processing")
+    COMPLETED = "COMPLETED", _("Completed")
+    FAILED = "FAILED", _("Failed")
+
+
+def default_certificate_layout():
+    """Relative coordinates (0–1) for text on the template image."""
+    return {
+        "name_y_ratio": 0.42,
+        "id_y_ratio": 0.48,
+        "name_font_ratio": 0.038,
+        "id_font_ratio": 0.024,
+        "text_color": "#1a1a1a",
+    }
+
+
+class CertificateProgram(models.Model):
+    """
+    One certificate offering (e.g. seminar): admin uploads an A4 template and a recipient Excel file.
+    Celery generates one Certificate per matched portal user (by institutional_id).
+    """
+
+    title = models.CharField(_("program title"), max_length=255)
+    description = models.TextField(_("description"), blank=True)
+    template_image = models.ImageField(_("template image"), upload_to="certificate_templates/%Y/%m/")
+    layout = models.JSONField(_("text layout"), default=default_certificate_layout)
+    issued_date = models.DateField(_("issued date"))
+    valid_until = models.DateField(_("valid until"), null=True, blank=True)
+    issued_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="certificate_programs_issued",
+        limit_choices_to={"role__in": [UserRole.STAFF, UserRole.ADMIN]},
+    )
+    recipients_file = models.FileField(
+        _("recipients spreadsheet"),
+        upload_to="certificate_batches/%Y/%m/",
+        help_text=_("Excel file with Name and ID columns."),
+    )
+    batch_status = models.CharField(
+        _("batch status"),
+        max_length=20,
+        choices=CertificateProgramBatchStatus.choices,
+        default=CertificateProgramBatchStatus.PENDING,
+        db_index=True,
+    )
+    batch_summary = models.JSONField(_("batch summary"), default=dict, blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
 class Certificate(models.Model):
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
         related_name="certificates",
     )
+    program = models.ForeignKey(
+        CertificateProgram,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="certificates",
+    )
     title = models.CharField(_("certificate title"), max_length=255)
     description = models.TextField(_("description"), blank=True)
+    recipient_name = models.CharField(_("recipient name on certificate"), max_length=255, blank=True)
+    recipient_id_display = models.CharField(_("recipient ID on certificate"), max_length=64, blank=True)
     image_url = models.URLField(_("cover image URL"), blank=True)
     issued_by = models.ForeignKey(
         CustomUser,
@@ -56,14 +125,28 @@ class Certificate(models.Model):
     valid_until = models.DateField(_("valid until"), null=True, blank=True)
     pdf_file = models.FileField(_("PDF file"), upload_to="certificates/%Y/%m/", null=True, blank=True)
     status = models.CharField(_("status"), max_length=20, choices=CertificateStatus.choices, default=CertificateStatus.DRAFT)
+    is_suspended = models.BooleanField(
+        _("hidden from recipient portal"),
+        default=False,
+        db_index=True,
+        help_text=_("When true, the recipient does not see this certificate in their list."),
+    )
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:
         ordering = ["-issued_date"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["program", "user"],
+                condition=models.Q(program__isnull=False),
+                name="uniq_certificate_program_user",
+            ),
+        ]
 
     def __str__(self) -> str:
-        return f"{self.title} - {self.user.email}"
+        label = self.recipient_name or self.user.full_name or self.user.email
+        return f"{self.title} - {label}"
 
 
 class BenefitCategory(models.Model):
@@ -86,6 +169,7 @@ class Benefit(models.Model):
     description_short = models.CharField(_("short description"), max_length=200, blank=True)
     partner = models.CharField(_("partner"), max_length=255, blank=True)
     image_url = models.URLField(_("cover image URL"), blank=True)
+    image = models.ImageField(_("cover image"), upload_to="benefits/%Y/%m/", null=True, blank=True)
     category = models.ForeignKey(BenefitCategory, on_delete=models.SET_NULL, null=True, related_name="benefits")
     eligible_roles = models.CharField(_("eligible roles"), max_length=255, default="STUDENT,LECTURER,STAFF,ALUMNI")
     is_active = models.BooleanField(_("is active"), default=True)

@@ -3,6 +3,7 @@ API views (ViewSets and APIViews) for multi-role digital hub.
 Includes endpoints for users, certificates, cards, benefits, posts, and events.
 """
 
+import io
 import logging
 from datetime import timedelta
 from pathlib import Path
@@ -22,6 +23,10 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
+from django.http import HttpResponse
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.contrib.auth.password_validation import validate_password
+from rest_framework.parsers import FormParser, MultiPartParser
 
 from .models import (
     CustomUser,
@@ -34,6 +39,7 @@ from .models import (
 from .serializers import (
     UserDetailSerializer,
     UserCreateSerializer,
+    UserAdminUpdateSerializer,
     LecturerProfileSerializer,
     StaffProfileSerializer,
     AlumniProfileSerializer,
@@ -54,6 +60,7 @@ from .api_responses import (
 )
 from .exceptions import DeleteNotAllowed
 from .services.qr_generation import generate_qr_code, save_qr_to_bytes
+from .services.student_import import parse_student_import_xlsx
 from .services.card_generation import (
     generate_digital_card_image,
     save_card_image_to_bytes,
@@ -118,6 +125,139 @@ class MeView(APIView):
                 data=serializer.data,
                 detail=ApiMessage.PROFILE_UPDATED,
                 code=ApiCode.PROFILE_UPDATED,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+
+class StudentImportView(APIView):
+    """Bulk-create student accounts from Excel (.xlsx). Admin only."""
+
+    permission_classes = [IsAdmin]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        """Download a blank import template (.xlsx)."""
+        from openpyxl import Workbook
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Students"
+        ws.append(["Email", "Full name", "Institutional ID", "Department", "Password"])
+        ws.append(["student@example.com", "Example Student", "NIM-001", "Information Technology", ""])
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        resp = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        resp["Content-Disposition"] = 'attachment; filename="student_import_template.xlsx"'
+        return resp
+
+    def post(self, request):
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                error_response(detail='Missing file field "file".', code=ApiCode.VALIDATION_ERROR),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        raw = upload.read()
+        default_password = (request.data.get("default_password") or "").strip()
+
+        rows, parse_errors = parse_student_import_xlsx(raw)
+        if not rows:
+            detail = (
+                "; ".join(parse_errors)
+                if parse_errors
+                else "No student rows found. Add rows below the header or fix column headers."
+            )
+            return Response(
+                error_response(detail=detail, code=ApiCode.VALIDATION_ERROR),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        row_errors: list[dict] = [{"message": m} for m in parse_errors]
+        created = 0
+        skipped = 0
+
+        for r in rows:
+            pwd = r["password"] or default_password or None
+            if not pwd:
+                row_errors.append(
+                    {
+                        "row": r["row"],
+                        "email": r["email"],
+                        "message": "No password in row and default_password was not provided.",
+                    }
+                )
+                skipped += 1
+                continue
+            try:
+                validate_password(pwd)
+            except DjangoValidationError as exc:
+                row_errors.append(
+                    {
+                        "row": r["row"],
+                        "email": r["email"],
+                        "message": "; ".join(exc.messages),
+                    }
+                )
+                skipped += 1
+                continue
+
+            if CustomUser.objects.filter(email__iexact=r["email"]).exists():
+                row_errors.append(
+                    {
+                        "row": r["row"],
+                        "email": r["email"],
+                        "message": "Email already registered.",
+                    }
+                )
+                skipped += 1
+                continue
+
+            inst = r["institutional_id"]
+            if inst:
+                inst = inst.strip()
+                if CustomUser.objects.filter(institutional_id__iexact=inst).exists():
+                    row_errors.append(
+                        {
+                            "row": r["row"],
+                            "email": r["email"],
+                            "message": f"Institutional ID already in use: {inst}",
+                        }
+                    )
+                    skipped += 1
+                    continue
+            else:
+                inst = None
+
+            try:
+                CustomUser.objects.create_user(
+                    email=r["email"],
+                    password=pwd,
+                    role=UserRole.STUDENT,
+                    full_name=r["full_name"],
+                    department=r["department"] or "",
+                    institutional_id=inst,
+                )
+                created += 1
+            except Exception as exc:
+                logger.exception("student import row failed")
+                row_errors.append(
+                    {"row": r["row"], "email": r["email"], "message": str(exc)}
+                )
+                skipped += 1
+
+        return Response(
+            success_response(
+                data={
+                    "created": created,
+                    "skipped": skipped,
+                    "errors": row_errors,
+                },
+                detail=f"Import finished: {created} created, {skipped} skipped.",
             ),
             status=status.HTTP_200_OK,
         )
@@ -239,21 +379,37 @@ class ChangePasswordView(APIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """CRUD operations for users (admin/staff only)."""
+    """CRUD operations for users (admin-only)."""
 
     queryset = CustomUser.objects.all()
     serializer_class = UserDetailSerializer
-    permission_classes = [IsBackofficeRole]
+    permission_classes = [IsAdmin]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["role", "is_active"]
     search_fields = ["email", "full_name"]
-    ordering_fields = ["created_at", "email"]
-    ordering = ["-created_at"]
+    ordering_fields = ["date_joined", "updated_at", "email"]
+    ordering = ["-date_joined"]
+
+    def get_queryset(self):
+        return CustomUser.objects.select_related("staff_profile", "lecturer_profile").all()
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        roles_csv = self.request.query_params.get("roles")
+        if roles_csv:
+            raw = [r.strip() for r in roles_csv.split(",") if r.strip()]
+            allowed = {choice.value for choice in UserRole}
+            parts = [r for r in raw if r in allowed]
+            if parts:
+                queryset = queryset.filter(role__in=parts)
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "create":
             return UserCreateSerializer
+        if self.action in ("update", "partial_update"):
+            return UserAdminUpdateSerializer
         return UserDetailSerializer
 
     @action(detail=False, methods=["post"], permission_classes=[IsAdmin])
@@ -347,18 +503,12 @@ class LecturerProfileViewSet(viewsets.ModelViewSet):
 
 
 class StaffProfileViewSet(viewsets.ModelViewSet):
-    """Manage staff-specific profiles."""
+    """Manage staff-specific profiles (privileges). Admin-only; not exposed on user CRUD."""
 
     queryset = StaffProfile.objects.all()
     serializer_class = StaffProfileSerializer
-    permission_classes = [IsBackofficeRole]
+    permission_classes = [IsAdmin]
     pagination_class = StandardResultsSetPagination
-
-    def get_queryset(self):
-        """Staff see own profile; admin/superuser see all."""
-        if self.request.user.role == UserRole.STAFF:
-            return StaffProfile.objects.filter(user=self.request.user)
-        return super().get_queryset()
 
 
 class AlumniProfileViewSet(viewsets.ReadOnlyModelViewSet):

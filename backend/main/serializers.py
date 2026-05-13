@@ -1,21 +1,41 @@
 """Serializers for main domain resources."""
 
+import json
+
+from django.http import QueryDict
 from rest_framework import serializers
 
-from account.models import CustomUser
-from main.models import Benefit, BenefitCategory, Certificate, Event, Post
+from account.models import CustomUser, UserRole
+from main.models import (
+    Benefit,
+    BenefitCategory,
+    Certificate,
+    CertificateProgram,
+    default_certificate_layout,
+    Event,
+    Post,
+)
+
+ROLE_CHOICES = [choice.value for choice in UserRole]
 
 
 class UserSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ["id", "email", "full_name", "role", "photo", "joined_date"]
+        fields = ["id", "email", "full_name", "role", "photo", "joined_date", "institutional_id"]
         read_only_fields = fields
+
+
+class CertificateProgramStubSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CertificateProgram
+        fields = ["id", "title"]
 
 
 class CertificateSerializer(serializers.ModelSerializer):
     user = UserSummarySerializer(read_only=True)
     issued_by = UserSummarySerializer(read_only=True)
+    program = CertificateProgramStubSerializer(read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
@@ -23,8 +43,11 @@ class CertificateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user",
+            "program",
             "title",
             "description",
+            "recipient_name",
+            "recipient_id_display",
             "image_url",
             "issued_by",
             "issued_date",
@@ -32,10 +55,20 @@ class CertificateSerializer(serializers.ModelSerializer):
             "pdf_file",
             "status",
             "status_display",
+            "is_suspended",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "user", "issued_by", "pdf_file", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "user",
+            "program",
+            "issued_by",
+            "pdf_file",
+            "is_suspended",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class CertificateCreateSerializer(serializers.ModelSerializer):
@@ -60,6 +93,86 @@ class CertificateCreateSerializer(serializers.ModelSerializer):
         )
 
 
+class CertificateProgramSerializer(serializers.ModelSerializer):
+    issued_by = UserSummarySerializer(read_only=True)
+    batch_status_display = serializers.CharField(source="get_batch_status_display", read_only=True)
+
+    class Meta:
+        model = CertificateProgram
+        fields = [
+            "id",
+            "title",
+            "description",
+            "template_image",
+            "layout",
+            "issued_date",
+            "valid_until",
+            "issued_by",
+            "recipients_file",
+            "batch_status",
+            "batch_status_display",
+            "batch_summary",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "issued_by",
+            "recipients_file",
+            "batch_status",
+            "batch_status_display",
+            "batch_summary",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class CertificateProgramCreateSerializer(serializers.ModelSerializer):
+    """Multipart create: A4 template image + Excel recipients."""
+
+    layout = serializers.JSONField(required=False)
+
+    class Meta:
+        model = CertificateProgram
+        fields = [
+            "title",
+            "description",
+            "template_image",
+            "recipients_file",
+            "issued_date",
+            "valid_until",
+            "layout",
+        ]
+
+    def validate_recipients_file(self, value):
+        name = getattr(value, "name", "") or ""
+        if not name.lower().endswith(".xlsx"):
+            raise serializers.ValidationError("Upload an Excel .xlsx file.")
+        return value
+
+    def validate(self, attrs):
+        layout = attrs.get("layout")
+        if isinstance(layout, str):
+            if not layout.strip():
+                layout = None
+            else:
+                try:
+                    layout = json.loads(layout)
+                except json.JSONDecodeError as exc:
+                    raise serializers.ValidationError({"layout": "Invalid JSON for layout."}) from exc
+        if layout is not None and not isinstance(layout, dict):
+            raise serializers.ValidationError({"layout": "layout must be a JSON object."})
+        attrs["layout"] = {**default_certificate_layout(), **(layout or {})}
+        return attrs
+
+
+class CertificateProgramAddRecipientSerializer(serializers.Serializer):
+    """Add one recipient to a program by name + ID (same matching rules as Excel)."""
+
+    display_name = serializers.CharField(max_length=255)
+    id_raw = serializers.CharField(max_length=64, help_text="Institutional ID, email, or active digital card number.")
+
+
 class BenefitCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = BenefitCategory
@@ -68,7 +181,7 @@ class BenefitCategorySerializer(serializers.ModelSerializer):
 
 
 class BenefitSerializer(serializers.ModelSerializer):
-    category = BenefitCategorySerializer(read_only=True)
+    category = BenefitCategorySerializer(read_only=True, allow_null=True)
     eligible_roles = serializers.SerializerMethodField()
 
     class Meta:
@@ -78,17 +191,90 @@ class BenefitSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "description_short",
+            "image",
             "image_url",
             "partner",
             "category",
             "eligible_roles",
             "is_active",
             "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
     def get_eligible_roles(self, obj):
-        return [role.strip() for role in obj.eligible_roles.split(",")]
+        return [role.strip() for role in obj.eligible_roles.split(",") if role.strip()]
+
+
+class BenefitWriteSerializer(serializers.ModelSerializer):
+    """Create/update benefits; eligible_roles accepted as a list of role codes."""
+
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=BenefitCategory.objects.all(),
+        allow_null=True,
+        required=False,
+    )
+    eligible_roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=ROLE_CHOICES),
+        allow_empty=False,
+    )
+
+    class Meta:
+        model = Benefit
+        fields = [
+            "title",
+            "description",
+            "description_short",
+            "partner",
+            "image",
+            "image_url",
+            "category",
+            "eligible_roles",
+            "is_active",
+        ]
+
+    def to_internal_value(self, data):
+        mutable = None
+        if isinstance(data, QueryDict):
+            mutable = data.dict()
+        elif hasattr(data, "copy"):
+            mutable = data.copy()
+        elif isinstance(data, dict):
+            mutable = dict(data)
+
+        if mutable is not None:
+            er = mutable.get("eligible_roles")
+            if isinstance(er, str) and er.strip().startswith("["):
+                try:
+                    mutable["eligible_roles"] = json.loads(er)
+                except json.JSONDecodeError:
+                    pass
+            cat = mutable.get("category")
+            if cat == "":
+                mutable["category"] = None
+            return super().to_internal_value(mutable)
+
+        return super().to_internal_value(data)
+
+    def validate_eligible_roles(self, value):
+        seen = set()
+        ordered = []
+        for role in value:
+            if role not in seen:
+                seen.add(role)
+                ordered.append(role)
+        return ordered
+
+    def create(self, validated_data):
+        roles = validated_data.pop("eligible_roles")
+        validated_data["eligible_roles"] = ",".join(roles)
+        return Benefit.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        if "eligible_roles" in validated_data:
+            roles = validated_data.pop("eligible_roles")
+            validated_data["eligible_roles"] = ",".join(roles)
+        return super().update(instance, validated_data)
 
 
 class PostSerializer(serializers.ModelSerializer):

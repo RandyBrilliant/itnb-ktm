@@ -17,7 +17,7 @@ const studentItems: RoleNavItem[] = [
     href: "/student/certificates",
   },
   { id: "news", label: "News", icon: "newspaper", href: "/student/news" },
-  { id: "perks", label: "Perks", icon: "sell", href: "/student/perks" },
+  { id: "perks", label: "Benefits", icon: "sell", href: "/student/perks" },
 ]
 
 const staffItems: RoleNavItem[] = [
@@ -25,7 +25,7 @@ const staffItems: RoleNavItem[] = [
   { id: "news", label: "News", icon: "newspaper", href: "/staff/news" },
   {
     id: "perks",
-    label: "Perks",
+    label: "Benefits",
     icon: "sell",
     href: "/staff/perks",
   },
@@ -41,7 +41,7 @@ const lecturerItems: RoleNavItem[] = [
   },
   {
     id: "perks",
-    label: "Perks",
+    label: "Benefits",
     icon: "sell",
     href: "/lecturer/perks",
   },

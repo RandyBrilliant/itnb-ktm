@@ -107,6 +107,15 @@ class CustomUser(AbstractUser):
         db_index=True,
         help_text=_("Google OAuth ID for social login."),
     )
+    institutional_id = models.CharField(
+        _("student / staff ID"),
+        max_length=64,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text=_("Official ID (NIM/NIP/etc.) for matching certificates and records."),
+    )
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     username = None

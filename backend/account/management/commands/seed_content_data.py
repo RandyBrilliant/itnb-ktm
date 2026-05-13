@@ -32,7 +32,6 @@ class Command(BaseCommand):
             defaults={
                 "full_name": full_name,
                 "role": role,
-                "username": email,
                 "is_active": True,
                 "email_verified": True,
             },

@@ -1,10 +1,10 @@
 import { Suspense, lazy } from "react"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { Toaster } from "sonner"
 import { queryClient } from "@/lib/query-client"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
+import { AppToaster } from "@/components/ui/app-toaster"
 
 const AdminLayout = lazy(() => import("@/components/admin-layout").then((m) => ({ default: m.AdminLayout })))
 const LoginPage = lazy(() => import("@/pages/login-page").then((m) => ({ default: m.LoginPage })))
@@ -13,7 +13,42 @@ const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password-page").the
 const ResetPasswordPage = lazy(() => import("@/pages/reset-password-page").then((m) => ({ default: m.ResetPasswordPage })))
 const AdminDashboardPage = lazy(() => import("@/pages/admin-dashboard-page").then((m) => ({ default: m.AdminDashboardPage })))
 const AdminUsersPage = lazy(() => import("@/pages/admin-users-page").then((m) => ({ default: m.AdminUsersPage })))
+const AdminRoleUsersListPage = lazy(() =>
+  import("@/pages/admin-role-users-list-page").then((m) => ({ default: m.AdminRoleUsersListPage }))
+)
+const AdminRoleUsersCreatePage = lazy(() =>
+  import("@/pages/admin-role-users-create-page").then((m) => ({ default: m.AdminRoleUsersCreatePage }))
+)
+const AdminRoleUsersEditPage = lazy(() =>
+  import("@/pages/admin-role-users-edit-page").then((m) => ({ default: m.AdminRoleUsersEditPage }))
+)
+const AdminStudentRecordCreatePage = lazy(() =>
+  import("@/pages/admin-student-record-create-page").then((m) => ({ default: m.AdminStudentRecordCreatePage }))
+)
+const AdminStudentRecordEditPage = lazy(() =>
+  import("@/pages/admin-student-record-edit-page").then((m) => ({ default: m.AdminStudentRecordEditPage }))
+)
+const AdminPostsPage = lazy(() => import("@/pages/admin-posts-page").then((m) => ({ default: m.AdminPostsPage })))
+const AdminPostCreatePage = lazy(() => import("@/pages/admin-post-create-page").then((m) => ({ default: m.AdminPostCreatePage })))
+const AdminPostEditPage = lazy(() => import("@/pages/admin-post-edit-page").then((m) => ({ default: m.AdminPostEditPage })))
+const AdminBenefitsPage = lazy(() => import("@/pages/admin-benefits-page").then((m) => ({ default: m.AdminBenefitsPage })))
+const AdminBenefitCreatePage = lazy(() =>
+  import("@/pages/admin-benefit-create-page").then((m) => ({ default: m.AdminBenefitCreatePage }))
+)
+const AdminBenefitEditPage = lazy(() =>
+  import("@/pages/admin-benefit-edit-page").then((m) => ({ default: m.AdminBenefitEditPage }))
+)
+const AdminFooterInfoPage = lazy(() => import("@/pages/admin-footer-info-page").then((m) => ({ default: m.AdminFooterInfoPage })))
 const AdminPlaceholderPage = lazy(() => import("@/pages/admin-placeholder-page").then((m) => ({ default: m.AdminPlaceholderPage })))
+const AdminCertificatesPage = lazy(() =>
+  import("@/pages/admin-certificates-page").then((m) => ({ default: m.AdminCertificatesPage }))
+)
+const AdminCertificateProgramCreatePage = lazy(() =>
+  import("@/pages/admin-certificate-program-create-page").then((m) => ({ default: m.AdminCertificateProgramCreatePage }))
+)
+const AdminCertificateProgramDetailPage = lazy(() =>
+  import("@/pages/admin-certificate-program-detail-page").then((m) => ({ default: m.AdminCertificateProgramDetailPage }))
+)
 const StudentDashboard = lazy(() => import("@/pages/student/dashboard").then((m) => ({ default: m.StudentDashboard })))
 const StaffDashboardPage = lazy(() => import("@/pages/staff-dashboard-page").then((m) => ({ default: m.StaffDashboardPage })))
 const LecturerDashboardPage = lazy(() => import("@/pages/lecturer-dashboard-page").then((m) => ({ default: m.LecturerDashboardPage })))
@@ -61,11 +96,93 @@ function App() {
               }
             >
               <Route path="dashboard" element={<AdminDashboardPage />} />
+              <Route path="users/record/new" element={<AdminStudentRecordCreatePage />} />
+              <Route path="users/record/:id/edit" element={<AdminStudentRecordEditPage />} />
+              <Route path="users/:roleSegment/new" element={<AdminRoleUsersCreatePage />} />
+              <Route path="users/:roleSegment/:id/edit" element={<AdminRoleUsersEditPage />} />
+              <Route path="users/:roleSegment" element={<AdminRoleUsersListPage />} />
               <Route path="users" element={<AdminUsersPage />} />
-              <Route path="certificates" element={<AdminPlaceholderPage title="Certificates" description="Issue, validate, and manage institutional certificates for students and staff." />} />
-              <Route path="benefits" element={<AdminPlaceholderPage title="Course Material & Benefits" description="Curate content catalogs, perks, and academic support materials for role-based access." />} />
-              <Route path="posts" element={<AdminPlaceholderPage title="Campus News" description="Publish institutional announcements and long-form updates for all role portals." />} />
-              <Route path="events" element={<AdminPlaceholderPage title="Attendance & Events" description="Coordinate attendance operations and upcoming event schedules with status tracking." />} />
+              <Route path="profile" element={<ProfilePage role="ADMIN" />} />
+              <Route path="change-password" element={<ChangePasswordPage role="ADMIN" />} />
+              <Route path="posts/new" element={<AdminPostCreatePage />} />
+              <Route path="posts/:id/edit" element={<AdminPostEditPage />} />
+              <Route
+                path="privacy-policy"
+                element={
+                  <AdminFooterInfoPage
+                    title="Privacy Policy"
+                    description="How IT&B Hub collects, uses, and protects institutional and personal information."
+                    sections={[
+                      {
+                        heading: "Data Collection",
+                        body: "We collect account and activity data required to operate the portal, including login details, role access metadata, and content interactions for platform reliability and accountability.",
+                      },
+                      {
+                        heading: "Data Usage",
+                        body: "Collected data is used for authentication, authorization, operational reporting, and institutional communication. Data is not used outside approved academic and administrative purposes.",
+                      },
+                      {
+                        heading: "Security & Retention",
+                        body: "Data is protected with role-based access controls and secure transport. Retention follows institutional policy and legal obligations, with periodic review for minimization and compliance.",
+                      },
+                    ]}
+                  />
+                }
+              />
+              <Route
+                path="institutional-standards"
+                element={
+                  <AdminFooterInfoPage
+                    title="Institutional Standards"
+                    description="Operational and content standards that govern quality, consistency, and compliance across IT&B Hub."
+                    sections={[
+                      {
+                        heading: "Content Governance",
+                        body: "All published content must be accurate, role-appropriate, and approved by authorized personnel. Sensitive information must be reviewed before publication.",
+                      },
+                      {
+                        heading: "Access & Accountability",
+                        body: "Administrative actions are role-restricted and auditable. Users must operate under least-privilege principles and uphold professional conduct standards.",
+                      },
+                      {
+                        heading: "Service Reliability",
+                        body: "Teams should maintain reliable uptime, incident response procedures, and regular quality checks to ensure a secure and dependable user experience.",
+                      },
+                    ]}
+                  />
+                }
+              />
+              <Route
+                path="staff-support"
+                element={
+                  <AdminFooterInfoPage
+                    title="Staff Support"
+                    description="Support guidance for administrative and operational staff using IT&B Hub."
+                    sections={[
+                      {
+                        heading: "Technical Assistance",
+                        body: "For platform issues, submit a support request including affected module, timestamp, and screenshots to speed up triage and resolution.",
+                      },
+                      {
+                        heading: "Account & Access Requests",
+                        body: "Role changes, account unlocks, and access requests must be approved through designated administrators and verified against institutional policy.",
+                      },
+                      {
+                        heading: "Training & Documentation",
+                        body: "Staff should refer to updated internal guides and onboarding documentation for workflow standards, publication procedures, and security best practices.",
+                      },
+                    ]}
+                  />
+                }
+              />
+              <Route path="certificates/new" element={<AdminCertificateProgramCreatePage />} />
+              <Route path="certificates/:programId" element={<AdminCertificateProgramDetailPage />} />
+              <Route path="certificates" element={<AdminCertificatesPage />} />
+              <Route path="benefits/new" element={<AdminBenefitCreatePage />} />
+              <Route path="benefits/:id/edit" element={<AdminBenefitEditPage />} />
+              <Route path="benefits" element={<AdminBenefitsPage />} />
+              <Route path="posts" element={<AdminPostsPage />} />
+              <Route path="events" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="settings" element={<AdminPlaceholderPage title="System Settings" description="Configure administrative policies, permissions, and portal defaults." />} />
             </Route>
 
@@ -290,7 +407,7 @@ function App() {
           </Suspense>
 
           {/* Toast notifications */}
-          <Toaster position="top-right" />
+          <AppToaster />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

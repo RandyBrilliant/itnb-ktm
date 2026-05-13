@@ -9,6 +9,7 @@ app_name = "main"
 
 router = DefaultRouter()
 router.register(r"certificates", views.CertificateViewSet, basename="certificate")
+router.register(r"certificate-programs", views.CertificateProgramViewSet, basename="certificate-program")
 router.register(r"benefit-categories", views.BenefitCategoryViewSet, basename="benefit-category")
 router.register(r"benefits", views.BenefitViewSet, basename="benefit")
 router.register(r"posts", views.PostViewSet, basename="post")

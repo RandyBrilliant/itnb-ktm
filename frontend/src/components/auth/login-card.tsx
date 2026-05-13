@@ -1,5 +1,6 @@
 import type { FormEvent } from "react"
 import { useState } from "react"
+import { ThemedCheckbox } from "../ui/themed-checkbox"
 
 interface LoginCardProps {
   identifier: string
@@ -114,17 +115,11 @@ export function LoginCard({
         </div>
 
         <div className="flex items-center justify-between gap-4">
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => onRememberChange(e.target.checked)}
-              className="h-4 w-4 rounded-sm border border-[#8f6f6c] text-[#af0f24] focus:ring-[#af0f24]"
-            />
-            <span className="font-[var(--font-body)] text-sm text-[#1a1c1c]">
-              Keep me logged in
-            </span>
-          </label>
+          <ThemedCheckbox
+            checked={rememberMe}
+            onChange={(e) => onRememberChange(e.target.checked)}
+            label="Keep me logged in"
+          />
 
           <button
             type="button"

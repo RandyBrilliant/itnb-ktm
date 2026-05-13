@@ -10,6 +10,7 @@ from django.contrib.auth.tokens import default_token_generator
 
 from .models import (
     CustomUser,
+    UserRole,
     LecturerProfile,
     StaffProfile,
     AlumniProfile,
@@ -40,6 +41,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
         source="get_role_display",
         read_only=True,
     )
+    last_login = serializers.DateTimeField(read_only=True)
+    date_joined = serializers.DateTimeField(read_only=True)
+    is_staff = serializers.BooleanField(read_only=True)
+    is_superuser = serializers.BooleanField(read_only=True)
+    staff_profile = serializers.SerializerMethodField()
+    lecturer_profile = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -51,13 +58,67 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "role_display",
             "photo",
             "department",
+            "institutional_id",
             "joined_date",
             "alumni_year",
             "email_verified",
             "is_active",
+            "is_staff",
+            "is_superuser",
+            "last_login",
+            "date_joined",
+            "updated_at",
+            "staff_profile",
+            "lecturer_profile",
+        ]
+        read_only_fields = [
+            "id",
+            "role",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "last_login",
+            "date_joined",
             "updated_at",
         ]
-        read_only_fields = ["id", "role", "is_active", "updated_at"]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.role == UserRole.ADMIN:
+            data["department"] = ""
+        return data
+
+    def validate_institutional_id(self, value):
+        if value in (None, ""):
+            return None
+        text = str(value).strip()
+        return text or None
+
+    def validate(self, attrs):
+        inst = attrs.get("institutional_id")
+        if inst:
+            qs = CustomUser.objects.exclude(pk=self.instance.pk).filter(institutional_id__iexact=inst.strip())
+            if qs.exists():
+                raise serializers.ValidationError({"institutional_id": "This ID is already registered."})
+        if self.instance.role == UserRole.ADMIN:
+            attrs["department"] = ""
+        return attrs
+
+    def get_staff_profile(self, obj):
+        """Staff directory privileges are not exposed on user payloads; use staff profile APIs as admin."""
+        return None
+
+    def get_lecturer_profile(self, obj):
+        if obj.role != UserRole.LECTURER:
+            return None
+        try:
+            lp = obj.lecturer_profile
+        except LecturerProfile.DoesNotExist:
+            return None
+        return {
+            "contact_phone": lp.contact_phone,
+            "address": lp.address,
+        }
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -74,6 +135,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
         required=True,
         help_text="Confirm password",
     )
+    contact_phone = serializers.CharField(write_only=True, required=False, allow_blank=True, default="")
+    address = serializers.CharField(write_only=True, required=False, allow_blank=True, default="")
+    alumni_year = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = CustomUser
@@ -84,22 +148,145 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "password",
             "password_confirm",
             "department",
+            "institutional_id",
             "is_active",
+            "alumni_year",
+            "contact_phone",
+            "address",
         ]
+
+    def validate_institutional_id(self, value):
+        if value in (None, ""):
+            return None
+        text = str(value).strip()
+        return text or None
 
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("password_confirm"):
             raise serializers.ValidationError(
                 {"password_confirm": "Passwords do not match."}
             )
+        inst = attrs.get("institutional_id")
+        if inst:
+            if CustomUser.objects.filter(institutional_id__iexact=str(inst).strip()).exists():
+                raise serializers.ValidationError({"institutional_id": "This ID is already registered."})
+
+        role = attrs.get("role")
+        if role == UserRole.ADMIN:
+            attrs["department"] = ""
+
         return attrs
 
     def create(self, validated_data):
         password = validated_data.pop("password")
+        contact_phone = validated_data.pop("contact_phone", "")
+        address = validated_data.pop("address", "")
+
+        role = validated_data.get("role")
+        if role == UserRole.STUDENT:
+            validated_data["alumni_year"] = None
+        if role == UserRole.ADMIN:
+            validated_data.setdefault("is_staff", True)
+            validated_data["department"] = ""
+        elif role == UserRole.STAFF:
+            validated_data.setdefault("is_staff", True)
+        elif role == UserRole.LECTURER:
+            validated_data.setdefault("is_staff", False)
+
         user = CustomUser.objects.create_user(
             password=password,
             **validated_data,
         )
+
+        if user.role == UserRole.STAFF:
+            StaffProfile.objects.create(
+                user=user,
+                staff_role="",
+                can_issue_certificates=False,
+                can_manage_benefits=False,
+            )
+        elif user.role == UserRole.LECTURER:
+            LecturerProfile.objects.create(
+                user=user,
+                contact_phone=(contact_phone or "").strip(),
+                address=(address or "").strip(),
+            )
+
+        return user
+
+
+class UserAdminUpdateSerializer(serializers.ModelSerializer):
+    """PATCH user + lecturer profile fields. Staff privileges are not updated via user PATCH."""
+
+    contact_phone = serializers.CharField(required=False, allow_blank=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    role = serializers.ChoiceField(
+        choices=[UserRole.STUDENT.value, UserRole.ALUMNI.value],
+        required=False,
+    )
+    alumni_year = serializers.IntegerField(required=False, allow_null=True)
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            "email",
+            "full_name",
+            "department",
+            "institutional_id",
+            "is_active",
+            "role",
+            "alumni_year",
+            "contact_phone",
+            "address",
+        ]
+
+    def validate_institutional_id(self, value):
+        if value in (None, ""):
+            return None
+        text = str(value).strip()
+        return text or None
+
+    def validate(self, attrs):
+        inst = attrs.get("institutional_id")
+        if inst:
+            qs = CustomUser.objects.exclude(pk=self.instance.pk).filter(
+                institutional_id__iexact=str(inst).strip()
+            )
+            if qs.exists():
+                raise serializers.ValidationError({"institutional_id": "This ID is already registered."})
+
+        if self.instance.role == UserRole.ADMIN:
+            attrs["department"] = ""
+
+        if "role" in attrs:
+            if self.instance.role not in (UserRole.STUDENT, UserRole.ALUMNI):
+                raise serializers.ValidationError(
+                    {"role": "Only student or alumni records can change role here."}
+                )
+            if attrs["role"] == UserRole.STUDENT.value:
+                attrs["role"] = UserRole.STUDENT
+            elif attrs["role"] == UserRole.ALUMNI.value:
+                attrs["role"] = UserRole.ALUMNI
+            else:
+                raise serializers.ValidationError({"role": "Role must be Student or Alumni."})
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        lec_keys = ("contact_phone", "address")
+        lec_payload = {k: validated_data.pop(k) for k in lec_keys if k in validated_data}
+
+        if validated_data.get("role") == UserRole.STUDENT:
+            validated_data["alumni_year"] = None
+
+        user = super().update(instance, validated_data)
+
+        if lec_payload and user.role == UserRole.LECTURER:
+            profile, _ = LecturerProfile.objects.get_or_create(user=user)
+            for key, val in lec_payload.items():
+                setattr(profile, key, val)
+            profile.save()
+
         return user
 
 

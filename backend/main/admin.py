@@ -1,14 +1,22 @@
 from django.contrib import admin
 
-from .models import Benefit, BenefitCategory, Certificate, Event, Post
+from .models import Benefit, BenefitCategory, Certificate, CertificateProgram, Event, Post
 
 
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ("title", "user", "status", "issued_date", "valid_until")
-    list_filter = ("status", "issued_date", "valid_until")
-    search_fields = ("title", "user__email")
+    list_display = ("title", "user", "program", "status", "is_suspended", "issued_date", "valid_until")
+    list_filter = ("status", "is_suspended", "issued_date", "valid_until")
+    search_fields = ("title", "user__email", "recipient_name", "recipient_id_display")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(CertificateProgram)
+class CertificateProgramAdmin(admin.ModelAdmin):
+    list_display = ("title", "batch_status", "issued_date", "created_at")
+    list_filter = ("batch_status", "issued_date")
+    search_fields = ("title", "description")
+    readonly_fields = ("created_at", "updated_at", "batch_summary")
 
 
 @admin.register(BenefitCategory)

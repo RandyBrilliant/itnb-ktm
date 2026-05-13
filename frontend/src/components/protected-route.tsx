@@ -18,6 +18,7 @@ export function ProtectedRoute({
   allowedRoles,
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth()
+  const hasAccessToken = !!localStorage.getItem("access_token")
 
   if (isLoading) {
     return (
@@ -30,7 +31,7 @@ export function ProtectedRoute({
     )
   }
 
-  if (!isAuthenticated) {
+  if (!hasAccessToken || !isAuthenticated) {
     return <Navigate to={loginPath} replace />
   }
 

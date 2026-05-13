@@ -89,6 +89,12 @@ def generate_certificate_pdf(certificate) -> bytes:
 
 def generate_certificate_pdf_bytes(certificate) -> BytesIO:
     """Generate certificate PDF and return a seeked BytesIO object."""
+    if getattr(certificate, "program_id", None):
+        from main.services.certificate_template import render_template_certificate_pdf
+
+        payload = BytesIO(render_template_certificate_pdf(certificate))
+        payload.seek(0)
+        return payload
     payload = BytesIO(generate_certificate_pdf(certificate))
     payload.seek(0)
     return payload
