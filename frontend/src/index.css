@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@layer utilities {
+  /* Student ID card: both cqw + cqh need block+inline size containment */
+  .id-card-text-scope {
+    container-type: size;
+  }
+}
+
 @layer base {
   :root {
     --font-body: "Plus Jakarta Sans", "Inter", "Segoe UI", "Roboto", sans-serif;

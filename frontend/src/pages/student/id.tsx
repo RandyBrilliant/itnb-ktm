@@ -18,6 +18,50 @@ interface CardPresentation {
   qrImageUrl: string
 }
 
+/**
+ * Overlay text only—the PNG template prints the red captions. Percent `top`s
+ * anchor each datum in its value band (below those baked-in labels).
+ */
+function CardValueOverlay({
+  value,
+  topPct,
+  emphasis = "normal",
+}: {
+  value: string
+  topPct: string
+  emphasis?: "name" | "degree" | "normal"
+}) {
+  const positioning = `absolute left-[16.75%] right-[37.75%] ${topPct}`
+
+  if (emphasis === "degree") {
+    return (
+      <p
+        className={`${positioning} leading-[1.08] tracking-tight break-words text-[clamp(0.88rem,5.8cqw,1.52rem)] font-extrabold text-[#b11324]`}
+      >
+        {value}
+      </p>
+    )
+  }
+
+  if (emphasis === "name") {
+    return (
+      <p
+        className={`${positioning} leading-[1.07] tracking-tight break-words text-[clamp(0.88rem,4.95cqw,1.4rem)] font-black text-[#212121]`}
+      >
+        {value}
+      </p>
+    )
+  }
+
+  return (
+    <p
+      className={`${positioning} leading-[1.18] tracking-tight break-words text-[clamp(0.72rem,3.75cqw,1.05rem)] font-semibold text-[#212121]`}
+    >
+      {value}
+    </p>
+  )
+}
+
 const FRONT_TEMPLATE_FALLBACK = `${env.VITE_API_URL}/media/cards/templates/front.png`
 const BACK_TEMPLATE_FALLBACK = `${env.VITE_API_URL}/media/cards/templates/back.png`
 
@@ -103,7 +147,7 @@ export function StudentIDPage() {
           <motion.div
             animate={{ rotateY: flipped ? 180 : 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
-            className="relative w-full [aspect-ratio:672/1024] [transform-style:preserve-3d]"
+            className="id-card-text-scope relative w-full [aspect-ratio:672/1024] [transform-style:preserve-3d]"
           >
             <div
               className="absolute inset-0 overflow-hidden rounded-2xl border border-[#d9d9d9] bg-[#f4f4f4] [backface-visibility:hidden]"
@@ -118,6 +162,7 @@ export function StudentIDPage() {
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-b from-[#f7f7f7] to-[#ececec]" />
               )}
+              {/* Query container lives on motion.id-card-text-scope; avoid nesting @container here */}
               <div className="relative h-full text-[#212121]">
                 <div className="absolute left-[36.2%] top-[11.9%] h-[33.6%] w-[39.8%] overflow-hidden">
                   {!photoFailed ? (
@@ -134,31 +179,14 @@ export function StudentIDPage() {
                   )}
                 </div>
 
-                <div className="absolute left-[16.5%] top-[48.2%] w-[70%]">
-                  <p className="text-[6vw] font-black leading-[1.06] text-black sm:text-[38px]">
-                    {model.name}
-                  </p>
-                </div>
-
-                <p className="absolute left-[16.5%] top-[58.3%] text-[6vw] font-semibold leading-none text-black sm:text-[46px]">
-                  {model.studentId}
-                </p>
-
-                <p className="absolute left-[16.5%] top-[65.2%] text-[6vw] font-semibold leading-none text-black sm:text-[46px]">
-                  {model.major}
-                </p>
-
-                <p className="absolute left-[16.5%] top-[72.4%] text-[4.8vw] font-medium leading-none text-black sm:text-[32px]">
-                  {model.birthPlaceDate}
-                </p>
-
-                <p className="absolute left-[16.5%] top-[81.6%] text-[6vw] font-extrabold leading-none text-[#b11324] sm:text-[48px]">
-                  {model.degree}
-                </p>
-
-                <p className="absolute left-[16.5%] top-[94.1%] text-[5.4vw] font-semibold leading-none text-black sm:text-[42px]">
-                  {model.validThru}
-                </p>
+                {/* Per-field anchors: values sit beneath template-printed labels */}
+                <div aria-hidden className="pointer-events-none absolute left-[16.75%] right-[37.75%] top-[74.75%] border-t border-[#212121]/18" />
+                <CardValueOverlay value={model.name} topPct="top-[49.05%]" emphasis="name" />
+                <CardValueOverlay value={model.studentId} topPct="top-[56.95%]" />
+                <CardValueOverlay value={model.major} topPct="top-[64.35%]" />
+                <CardValueOverlay value={model.birthPlaceDate} topPct="top-[71.95%]" />
+                <CardValueOverlay value={model.degree} topPct="top-[76.95%]" emphasis="degree" />
+                <CardValueOverlay value={model.validThru} topPct="top-[83.95%]" />
 
                 <div className="absolute left-[62.2%] top-[81.1%] h-[16.8%] w-[31%] overflow-hidden rounded-[10px] border-[3px] border-[#8f2634] bg-white">
                   {model.qrImageUrl ? (
