@@ -180,7 +180,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Digital card template settings
 ID_CARD_FRONT_TEMPLATE_URL = get_env(
     "ID_CARD_FRONT_TEMPLATE_URL",
-    f"{MEDIA_URL}cards/templates/front.png",
+    f"{MEDIA_URL}cards/templates/card-bg.jpg",
 )
 ID_CARD_BACK_TEMPLATE_URL = get_env(
     "ID_CARD_BACK_TEMPLATE_URL",
@@ -188,7 +188,7 @@ ID_CARD_BACK_TEMPLATE_URL = get_env(
 )
 ID_CARD_FRONT_TEMPLATE_PATH = get_env(
     "ID_CARD_FRONT_TEMPLATE_PATH",
-    str(MEDIA_ROOT / "cards" / "templates" / "front.png"),
+    str(MEDIA_ROOT / "cards" / "templates" / "card-bg.jpg"),
 )
 ID_CARD_BACK_TEMPLATE_PATH = get_env(
     "ID_CARD_BACK_TEMPLATE_PATH",
@@ -285,6 +285,35 @@ ASGI_APPLICATION = 'backend.asgi.application'
 # Logging Configuration
 # ---------------------------------------------------------------------------
 
+def _active_log_handlers():
+    """Use file logging only when the logs directory is writable (bind mounts on Windows may not be)."""
+    handlers = ['console']
+    log_file = BASE_DIR / 'logs' / 'django.log'
+    try:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(log_file, 'a', encoding='utf-8'):
+            pass
+        handlers.append('file')
+    except OSError:
+        pass
+    return handlers
+
+
+_ACTIVE_LOG_HANDLERS = _active_log_handlers()
+
+_LOG_HANDLERS = {
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'simple',
+    },
+}
+if 'file' in _ACTIVE_LOG_HANDLERS:
+    _LOG_HANDLERS['file'] = {
+        'class': 'logging.FileHandler',
+        'filename': BASE_DIR / 'logs' / 'django.log',
+        'formatter': 'verbose',
+    }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -298,29 +327,19 @@ LOGGING = {
             'style': '{',
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
-            'formatter': 'verbose',
-        },
-    },
+    'handlers': _LOG_HANDLERS,
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': _ACTIVE_LOG_HANDLERS,
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': _ACTIVE_LOG_HANDLERS,
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
         'account': {
-            'handlers': ['console', 'file'],
+            'handlers': _ACTIVE_LOG_HANDLERS,
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },

@@ -2,7 +2,10 @@ import { useEffect, useState } from "react"
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getUser, updateUser } from "@/api/users"
+import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
+import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
+import { resolveMediaUrl } from "@/lib/media-url"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { userKeys } from "@/hooks/use-users-query"
@@ -22,6 +25,8 @@ export function AdminStudentRecordEditPage() {
   const [institutionalId, setInstitutionalId] = useState("")
   const [alumniYear, setAlumniYear] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoRemoved, setPhotoRemoved] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!Number.isFinite(userId)) {
@@ -48,7 +53,13 @@ export function AdminStudentRecordEditPage() {
     setInstitutionalId(user.institutional_id ?? "")
     setIsActive(user.is_active)
     setAlumniYear(user.alumni_year != null ? String(user.alumni_year) : "")
+    setPhotoFile(null)
+    setPhotoRemoved(false)
   }, [user, navigate])
+
+  useEffect(() => {
+    if (photoFile) setPhotoRemoved(false)
+  }, [photoFile])
 
   const handleSubmit = async () => {
     if (!user) return
@@ -81,6 +92,8 @@ export function AdminStudentRecordEditPage() {
         is_active: isActive,
         role: recordRole,
         alumni_year,
+        photoFile: photoFile ?? undefined,
+        photoRemoved: photoRemoved || undefined,
       })
       await queryClient.invalidateQueries({ queryKey: userKeys.all })
       await queryClient.invalidateQueries({ queryKey: ["admin-student-record-edit", userId] })
@@ -120,8 +133,18 @@ export function AdminStudentRecordEditPage() {
         </p>
       </div>
 
-      <div className="rounded-sm border border-[#e2e2e2] bg-white p-6 shadow-[32px_0_32px_rgba(175,15,36,0.04)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <div className="rounded-sm border border-[#e2e2e2] bg-white p-6 shadow-[32px_0_32px_rgba(175,15,36,0.04)] lg:col-span-3">
         <div className="grid max-w-xl grid-cols-1 gap-4">
+          <ProfilePhotoField
+            file={photoFile}
+            existingImageUrl={user.photo && !photoRemoved ? resolveMediaUrl(user.photo) : ""}
+            disabled={isSubmitting}
+            onFileChange={setPhotoFile}
+            onPhotoRemoved={() => setPhotoRemoved(true)}
+            onValidationError={(message) => toast.warning("Profile photo", message)}
+          />
+
           <label className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Record type</span>
             <select
@@ -216,6 +239,11 @@ export function AdminStudentRecordEditPage() {
               Cancel
             </Link>
           </div>
+        </div>
+        </div>
+
+        <div className="lg:col-span-1">
+          <UserAccountMetadata user={user} title="Record Details" />
         </div>
       </div>
     </div>

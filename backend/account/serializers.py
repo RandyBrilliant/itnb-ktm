@@ -218,6 +218,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 class UserAdminUpdateSerializer(serializers.ModelSerializer):
     """PATCH user + lecturer profile fields. Staff privileges are not updated via user PATCH."""
 
+    photo = serializers.ImageField(required=False, allow_null=True)
     contact_phone = serializers.CharField(required=False, allow_blank=True)
     address = serializers.CharField(required=False, allow_blank=True)
     role = serializers.ChoiceField(
@@ -231,6 +232,7 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "email",
             "full_name",
+            "photo",
             "department",
             "institutional_id",
             "is_active",

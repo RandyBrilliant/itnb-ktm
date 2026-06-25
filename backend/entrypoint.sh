@@ -11,8 +11,13 @@ fi
 APP_UID=1000
 APP_GID=1000
 mkdir -p /app/logs /app/media /app/staticfiles
-mkdir -p /app/media/account/users /app/media/cards /app/media/certificates
-chown -R ${APP_UID}:${APP_GID} /app/logs /app/media /app/staticfiles 2>/dev/null || true
+mkdir -p /app/media/account/users /app/media/cards/templates /app/media/certificates
+if [ -d /app/media_seed/cards/templates ]; then
+    cp -rn /app/media_seed/cards/templates/. /app/media/cards/templates/ 2>/dev/null || true
+fi
+chown -R ${APP_UID}:${APP_GID} /app/logs /app/media /app/staticfiles 2>/dev/null \
+    || chmod -R a+rwx /app/logs /app/media /app/staticfiles 2>/dev/null \
+    || true
 
 # Production checks
 if [ "${DEBUG:-0}" = "0" ]; then

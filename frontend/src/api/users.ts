@@ -35,6 +35,24 @@ export type AdminUpdateUserPayload = {
   can_manage_benefits?: boolean
   contact_phone?: string
   address?: string
+  photoFile?: File | null
+  photoRemoved?: boolean
+}
+
+function appendAdminUserFormFields(fd: FormData, payload: Omit<AdminUpdateUserPayload, "photoFile" | "photoRemoved">): void {
+  if (payload.email !== undefined) fd.append("email", payload.email)
+  if (payload.full_name !== undefined) fd.append("full_name", payload.full_name)
+  if (payload.department !== undefined) fd.append("department", payload.department)
+  if (payload.institutional_id !== undefined) {
+    fd.append("institutional_id", payload.institutional_id ?? "")
+  }
+  if (payload.is_active !== undefined) fd.append("is_active", String(payload.is_active))
+  if (payload.role !== undefined) fd.append("role", payload.role)
+  if (payload.alumni_year !== undefined) {
+    fd.append("alumni_year", payload.alumni_year == null ? "" : String(payload.alumni_year))
+  }
+  if (payload.contact_phone !== undefined) fd.append("contact_phone", payload.contact_phone)
+  if (payload.address !== undefined) fd.append("address", payload.address)
 }
 
 export interface UserFilters {
@@ -88,10 +106,20 @@ export async function createUser(userData: CreateUserPayload): Promise<User> {
  * PATCH /api/users/{id}/ - Update user
  */
 export async function updateUser(id: number, userData: AdminUpdateUserPayload): Promise<User> {
-  const { data } = await api.patch<ApiSuccessResponse<User> | User>(
-    `/api/users/${id}/`,
-    userData
-  )
+  const { photoFile, photoRemoved, ...rest } = userData
+
+  if (photoFile) {
+    const fd = new FormData()
+    appendAdminUserFormFields(fd, rest)
+    fd.append("photo", photoFile)
+    const { data } = await api.patch<ApiSuccessResponse<User> | User>(`/api/users/${id}/`, fd)
+    return unwrapApiData(data, "Failed to update user")
+  }
+
+  const body: Record<string, unknown> = { ...rest }
+  if (photoRemoved) body.photo = null
+
+  const { data } = await api.patch<ApiSuccessResponse<User> | User>(`/api/users/${id}/`, body)
   return unwrapApiData(data, "Failed to update user")
 }
 

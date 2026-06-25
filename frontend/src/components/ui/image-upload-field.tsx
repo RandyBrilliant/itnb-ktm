@@ -19,6 +19,8 @@ export interface ImageUploadFieldProps {
   cropAspect?: number
   /** Show pixel/aspect guidelines for admins (defaults to true when enableCrop is on). */
   showCoverGuidelines?: boolean
+  /** Optional class for the preview image element. */
+  previewClassName?: string
 }
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
@@ -35,6 +37,7 @@ export function ImageUploadField({
   enableCrop = false,
   cropAspect,
   showCoverGuidelines: showCoverGuidelinesProp,
+  previewClassName = "h-40 w-full rounded-sm border border-[#e2e2e2] object-cover",
 }: ImageUploadFieldProps) {
   const showCoverGuidelines = showCoverGuidelinesProp ?? enableCrop
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -124,11 +127,7 @@ export function ImageUploadField({
       >
         {previewUrl ? (
           <div className="space-y-3">
-            <img
-              src={previewUrl}
-              alt="Selected preview"
-              className="h-40 w-full rounded-sm border border-[#e2e2e2] object-cover"
-            />
+            <img src={previewUrl} alt="Selected preview" className={previewClassName} />
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"

@@ -18,6 +18,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 CARD_SIZE = (672, 1024)
 FONT_FALLBACK = "arial.ttf"
+LABEL_COLOR = "#b11324"
+VALUE_COLOR = "#111111"
 
 
 @lru_cache(maxsize=4)
@@ -57,19 +59,25 @@ def _fit_cover(image: Image.Image, target_w: int, target_h: int) -> Image.Image:
     return resized.crop((left, top, left + target_w, top + target_h))
 
 
+def _draw_field(draw, x: int, label_y: int, label: str, value: str, label_font, value_font):
+    draw.text((x, label_y), label, fill=LABEL_COLOR, font=label_font)
+    bbox = draw.textbbox((x, label_y), label, font=label_font)
+    draw.text((x, bbox[3] + 6), value, fill=VALUE_COLOR, font=value_font)
+
+
 def generate_digital_card_image(user, card_type: str) -> Image.Image:
-    """
-    Generate a digital card front image from template with user data overlays.
-    """
+    """Generate a digital card front image from card-bg.jpg with user data overlays."""
     template = _load_template(getattr(settings, "ID_CARD_FRONT_TEMPLATE_PATH", None))
     canvas = template.copy() if template else Image.new("RGBA", CARD_SIZE, "#f4f4f4")
     if canvas.size != CARD_SIZE:
         canvas = _fit_cover(canvas, CARD_SIZE[0], CARD_SIZE[1])
 
     draw = ImageDraw.Draw(canvas)
-    value_font = _load_font(58)
-    value_sm_font = _load_font(46)
-    degree_font = _load_font(54)
+    label_font = _load_font(22)
+    value_font = _load_font(34)
+    name_font = _load_font(38)
+    degree_font = _load_font(40)
+    valid_font = _load_font(30)
 
     name = (user.full_name or "Student").strip()
     department = (user.department or card_type.title()).strip()
@@ -77,32 +85,41 @@ def generate_digital_card_image(user, card_type: str) -> Image.Image:
     valid_until = getattr(getattr(user, "digital_card", None), "valid_until", None)
     valid_until_text = valid_until.strftime("%B %Y") if valid_until else "-"
 
-    # text overlays: tuned for 672x1024 template
-    draw.text((112, 492), name, fill="#111111", font=value_font)
-    draw.text((112, 596), card_number, fill="#111111", font=value_sm_font)
-    draw.text((112, 666), department, fill="#111111", font=value_sm_font)
-    draw.text((112, 742), "-", fill="#111111", font=_load_font(34))  # birth placeholder
-    draw.text((112, 834), "Bachelor Degree", fill="#b11324", font=degree_font)
-    draw.text((112, 960), valid_until_text, fill="#111111", font=_load_font(52))
+    content_x = 112
+    _draw_field(draw, content_x, 400, "Name", name, label_font, name_font)
+    _draw_field(draw, content_x, 470, "Student ID", card_number, label_font, value_font)
+    _draw_field(draw, content_x, 535, "Major", department, label_font, value_font)
+    _draw_field(draw, content_x, 600, "Place, Date of Birth", "-", label_font, value_font)
 
-    # profile image placeholder
-    photo_field = (243, 122, 488, 353)
+    draw.line((content_x, 680, 430, 680), fill="#21212133", width=1)
+    draw.text((content_x, 700), "Bachelor Degree", fill=LABEL_COLOR, font=degree_font)
+    draw.text((content_x, 752), "Valid Thru", fill=LABEL_COLOR, font=label_font)
+    draw.text((content_x, 778), valid_until_text, fill=VALUE_COLOR, font=valid_font)
+
+    photo_field = (218, 132, 454, 368)
     if getattr(user, "photo", None):
         try:
             with Image.open(user.photo.path) as photo:
-                photo = _fit_cover(photo.convert("RGB"), photo_field[2] - photo_field[0], photo_field[3] - photo_field[1])
+                photo = _fit_cover(
+                    photo.convert("RGB"),
+                    photo_field[2] - photo_field[0],
+                    photo_field[3] - photo_field[1],
+                )
                 canvas.paste(photo, photo_field[:2])
         except Exception:
             pass
 
-    # optional QR
-    qr_field = (418, 830, 611, 1001)
+    qr_field = (433, 798, 621, 975)
     qr_path = getattr(getattr(user, "digital_card", None), "qr_code", None)
     qr_path = getattr(qr_path, "path", None)
     if qr_path:
         try:
             with Image.open(qr_path) as qr:
-                qr = _fit_cover(qr.convert("RGB"), qr_field[2] - qr_field[0], qr_field[3] - qr_field[1])
+                qr = _fit_cover(
+                    qr.convert("RGB"),
+                    qr_field[2] - qr_field[0],
+                    qr_field[3] - qr_field[1],
+                )
                 canvas.paste(qr, qr_field[:2])
         except Exception:
             pass
@@ -113,10 +130,10 @@ def generate_digital_card_image(user, card_type: str) -> Image.Image:
 def save_card_image_to_bytes(card_image: Image.Image) -> BytesIO:
     """
     Convert card image to bytes for saving.
-    
+
     Args:
         card_image: PIL Image object
-    
+
     Returns:
         BytesIO object ready for FileField
     """

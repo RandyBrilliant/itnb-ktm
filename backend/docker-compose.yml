@@ -19,6 +19,7 @@ services:
     volumes:
       - .:/app
       - media_volume:/app/media
+      - logs_volume:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -38,6 +39,7 @@ services:
     volumes:
       - .:/app
       - media_volume:/app/media
+      - logs_volume:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -57,6 +59,7 @@ services:
     volumes:
       - .:/app
       - media_volume:/app/media
+      - logs_volume:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -89,4 +92,5 @@ services:
 volumes:
   postgres_data:
   media_volume:
+  logs_volume:
   redis_data:

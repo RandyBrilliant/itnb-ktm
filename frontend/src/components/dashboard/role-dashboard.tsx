@@ -3,7 +3,6 @@ import { useRoleDashboard } from "@/hooks/use-role-dashboard"
 import { RoleShell } from "@/components/navigation/role-shell"
 import { AnimatedPage } from "@/components/animation/animated-page"
 import { motion } from "framer-motion"
-import { Link } from "react-router-dom"
 import { resolveMediaUrl } from "@/lib/media-url"
 
 const ROLE_TITLE: Record<UserRole, string> = {
@@ -14,24 +13,8 @@ const ROLE_TITLE: Record<UserRole, string> = {
   ALUMNI: "Alumni",
 }
 
-const ROLE_CARD_LABEL: Record<UserRole, string> = {
-  STUDENT: "STUDENT ID CARD",
-  STAFF: "STAFF ACCESS CARD",
-  LECTURER: "LECTURER PASS",
-  ADMIN: "ADMIN ACCESS",
-  ALUMNI: "ALUMNI CARD",
-}
-
-const ROLE_SESSION_LABEL: Record<UserRole, string> = {
-  STUDENT: "ACTIVE CAMPUS SESSION",
-  STAFF: "ACTIVE OPERATIONS SESSION",
-  LECTURER: "ACTIVE TEACHING SESSION",
-  ADMIN: "ACTIVE ADMIN SESSION",
-  ALUMNI: "ACTIVE ALUMNI SESSION",
-}
-
 export function RoleDashboard({ role }: { role: UserRole }) {
-  const { isBootLoading, isDataLoading, me, card, events, stats } = useRoleDashboard(role)
+  const { isBootLoading, isDataLoading, me, events, stats } = useRoleDashboard(role)
 
   if (isBootLoading) {
     return (
@@ -73,79 +56,6 @@ export function RoleDashboard({ role }: { role: UserRole }) {
             <p className="text-[10px] font-bold uppercase text-[#5f5e5e]">Status: Active</p>
           </div>
         </div>
-
-        <section className="mb-8">
-          <motion.div
-            className="relative overflow-hidden rounded-2xl bg-[#af0f24] p-6 text-white shadow-[0px_10px_32px_rgba(175,15,36,0.18)]"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.26, ease: "easeOut" }}
-          >
-            <div className="pointer-events-none absolute inset-0 opacity-10">
-              <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#grid)" />
-              </svg>
-            </div>
-
-            <div className="relative z-10 flex justify-between gap-4">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[10px] font-bold tracking-[0.2em] opacity-80">
-                    {ROLE_CARD_LABEL[role]}
-                  </p>
-                  <p className="text-3xl font-bold tracking-tight">{me?.full_name || "User"}</p>
-                  <p className="text-sm opacity-90">
-                    {me?.department || role.toLowerCase()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold tracking-[0.2em] opacity-80">ID NUMBER</p>
-                  <p className="text-3xl font-mono font-bold tracking-wider">
-                    {card?.card_number || `ITNB-${me?.id ?? "----"}`}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-end gap-2">
-                <div className="h-24 w-20 border border-white/20 bg-white/10 p-1">
-                  <div className="flex h-full w-full items-center justify-center bg-black/20 text-xs">
-                    PHOTO
-                  </div>
-                </div>
-                <div
-                  className="text-[8px] font-bold tracking-[0.35em] opacity-40"
-                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-                >
-                  INSTITUTE OF TECH &amp; BUSINESS
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute bottom-4 left-6 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">contactless</span>
-              <span className="text-[10px] font-bold">TAP FOR DIGITAL ENTRY</span>
-            </div>
-            <div className="absolute bottom-4 right-6">
-              <span className="material-symbols-outlined text-2xl opacity-60">qr_code_2</span>
-            </div>
-          </motion.div>
-          {role === "STUDENT" ? (
-            <div className="mt-3 text-center">
-              <Link
-                to="/student/id"
-                className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#af0f24]"
-              >
-                <span className="material-symbols-outlined text-sm">sync</span>
-                Flip To View Full Card
-              </Link>
-            </div>
-          ) : null}
-        </section>
 
         <section className="mb-8 grid grid-cols-2 gap-4">
           <motion.div
@@ -227,27 +137,6 @@ export function RoleDashboard({ role }: { role: UserRole }) {
           </div>
         </section>
 
-        <section className="mb-10 flex items-center justify-between rounded-2xl bg-[#1a1c1c] p-5 text-white">
-          <div className="flex items-center gap-4">
-            <div className="bg-[#af0f24] p-2">
-              <span
-                className="material-symbols-outlined text-white"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                security
-              </span>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#ffb3b0]">
-                {ROLE_SESSION_LABEL[role]}
-              </p>
-              <p className="text-xs text-[#c8c6c5]">
-                Connected: ITB-Wifi-Main
-              </p>
-            </div>
-          </div>
-          <span className="material-symbols-outlined text-green-400">sensors</span>
-        </section>
       </AnimatedPage>
     </RoleShell>
   )

@@ -140,13 +140,41 @@ export async function getMe(): Promise<User> {
   return data.data
 }
 
+export type UpdateMePayload = {
+  full_name?: string
+  department?: string
+  institutional_id?: string | null
+  photoFile?: File | null
+  photoRemoved?: boolean
+}
+
+function appendMeFormFields(fd: FormData, payload: Omit<UpdateMePayload, "photoFile" | "photoRemoved">): void {
+  if (payload.full_name !== undefined) fd.append("full_name", payload.full_name)
+  if (payload.department !== undefined) fd.append("department", payload.department)
+  if (payload.institutional_id !== undefined) {
+    fd.append("institutional_id", payload.institutional_id ?? "")
+  }
+}
+
 /**
  * PATCH /api/auth/me/ - Update authenticated user profile fields
  */
-export async function updateMe(payload: Partial<User>): Promise<User> {
-  const { data } = await api.patch<ApiSuccessResponse<User>>("/api/auth/me/", payload)
-  if (!data.data) {
-    throw new Error("Failed to update profile")
+export async function updateMe(payload: UpdateMePayload): Promise<User> {
+  const { photoFile, photoRemoved, ...rest } = payload
+
+  if (photoFile) {
+    const fd = new FormData()
+    appendMeFormFields(fd, rest)
+    fd.append("photo", photoFile)
+    const { data } = await api.patch<ApiSuccessResponse<User>>("/api/auth/me/", fd)
+    if (!data.data) throw new Error("Failed to update profile")
+    return data.data
   }
+
+  const body: Record<string, unknown> = { ...rest }
+  if (photoRemoved) body.photo = null
+
+  const { data } = await api.patch<ApiSuccessResponse<User>>("/api/auth/me/", body)
+  if (!data.data) throw new Error("Failed to update profile")
   return data.data
 }

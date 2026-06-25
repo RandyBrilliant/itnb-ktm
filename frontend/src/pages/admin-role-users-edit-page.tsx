@@ -2,7 +2,10 @@ import { useEffect, useState } from "react"
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getUser, updateUser } from "@/api/users"
+import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
+import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
+import { resolveMediaUrl } from "@/lib/media-url"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 import {
@@ -26,6 +29,8 @@ export function AdminRoleUsersEditPage() {
   const [isActive, setIsActive] = useState(true)
   const [contactPhone, setContactPhone] = useState("")
   const [address, setAddress] = useState("")
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoRemoved, setPhotoRemoved] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!role || !Number.isFinite(userId)) {
@@ -62,7 +67,13 @@ export function AdminRoleUsersEditPage() {
       setContactPhone(user.lecturer_profile?.contact_phone ?? "")
       setAddress(user.lecturer_profile?.address ?? "")
     }
+    setPhotoFile(null)
+    setPhotoRemoved(false)
   }, [user, role, navigate])
+
+  useEffect(() => {
+    if (photoFile) setPhotoRemoved(false)
+  }, [photoFile])
 
   const handleSubmit = async () => {
     if (!user) return
@@ -89,6 +100,8 @@ export function AdminRoleUsersEditPage() {
               address: address.trim(),
             }
           : {}),
+        photoFile: photoFile ?? undefined,
+        photoRemoved: photoRemoved || undefined,
       }
       await updateUser(user.id, payload)
       await queryClient.invalidateQueries({ queryKey: userKeys.all })
@@ -133,8 +146,18 @@ export function AdminRoleUsersEditPage() {
         </p>
       </div>
 
-      <div className="rounded-sm border border-[#e2e2e2] bg-white p-6 shadow-[32px_0_32px_rgba(175,15,36,0.04)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <div className="rounded-sm border border-[#e2e2e2] bg-white p-6 shadow-[32px_0_32px_rgba(175,15,36,0.04)] lg:col-span-3">
         <div className="grid max-w-xl grid-cols-1 gap-4">
+          <ProfilePhotoField
+            file={photoFile}
+            existingImageUrl={user.photo && !photoRemoved ? resolveMediaUrl(user.photo) : ""}
+            disabled={isSubmitting}
+            onFileChange={setPhotoFile}
+            onPhotoRemoved={() => setPhotoRemoved(true)}
+            onValidationError={(message) => toast.warning("Profile photo", message)}
+          />
+
           <label className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Email</span>
             <input
@@ -225,6 +248,11 @@ export function AdminRoleUsersEditPage() {
               Cancel
             </Link>
           </div>
+        </div>
+        </div>
+
+        <div className="lg:col-span-1">
+          <UserAccountMetadata user={user} title="Record Details" />
         </div>
       </div>
     </div>
