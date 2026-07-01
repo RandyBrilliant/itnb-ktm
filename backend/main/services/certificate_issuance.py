@@ -82,3 +82,42 @@ def issue_program_certificate(
     except Exception as exc:
         logger.exception("issue_program_certificate failed: %s", exc)
         raise
+
+
+def issue_program_certificate_for_user(
+    program: CertificateProgram,
+    user: CustomUser,
+    *,
+    clear_suspension: bool = True,
+) -> Certificate:
+    """
+    Issue (or refresh) an ISSUED certificate from a program for a known portal
+    user — used when the recipient is already resolved (e.g. webinar attendee).
+    """
+    display_name = (user.full_name or user.email).strip()
+    id_display = (user.institutional_id or user.email or "").strip()
+
+    defaults = {
+        "title": program.title,
+        "description": program.description,
+        "recipient_name": display_name,
+        "recipient_id_display": id_display,
+        "issued_by": program.issued_by,
+        "issued_date": program.issued_date,
+        "valid_until": program.valid_until,
+        "status": CertificateStatus.ISSUED,
+    }
+    if clear_suspension:
+        defaults["is_suspended"] = False
+
+    with transaction.atomic():
+        cert, _created = Certificate.objects.update_or_create(
+            program=program,
+            user=user,
+            defaults=defaults,
+        )
+        if cert.pdf_file:
+            cert.pdf_file.delete(save=False)
+            cert.pdf_file = None
+            cert.save(update_fields=["pdf_file", "updated_at"])
+    return cert

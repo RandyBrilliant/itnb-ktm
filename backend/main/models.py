@@ -43,6 +43,32 @@ class CertificateProgramBatchStatus(models.TextChoices):
     FAILED = "FAILED", _("Failed")
 
 
+class WebinarMode(models.TextChoices):
+    ONLINE = "ONLINE", _("Online")
+    OFFLINE = "OFFLINE", _("In-person")
+    HYBRID = "HYBRID", _("Hybrid")
+
+
+class WebinarStatus(models.TextChoices):
+    DRAFT = "DRAFT", _("Draft")
+    PUBLISHED = "PUBLISHED", _("Published")
+    COMPLETED = "COMPLETED", _("Completed")
+    CANCELLED = "CANCELLED", _("Cancelled")
+
+
+class WebinarRegistrationStatus(models.TextChoices):
+    REGISTERED = "REGISTERED", _("Registered")
+    WAITLISTED = "WAITLISTED", _("Waitlisted")
+    CANCELLED = "CANCELLED", _("Cancelled")
+
+
+def generate_attendance_secret() -> str:
+    """Random per-webinar key used to sign rotating check-in/out tokens."""
+    import secrets
+
+    return secrets.token_urlsafe(32)
+
+
 def default_certificate_layout():
     """Relative coordinates (0–1) for text on the template image."""
     return {
@@ -226,6 +252,120 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return f"Event: {self.post.title}"
+
+
+class Webinar(models.Model):
+    """
+    A webinar/seminar. Backed by a Post (category EVENT) so it appears in the
+    news feed / announcements automatically. Optionally linked to a
+    CertificateProgram whose template is used to auto-issue certificates to
+    attendees when they check in.
+    """
+
+    post = models.OneToOneField(Post, on_delete=models.CASCADE, related_name="webinar")
+    certificate_program = models.ForeignKey(
+        CertificateProgram,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="webinars",
+        help_text=_("Template used to auto-issue certificates to attendees."),
+    )
+    mode = models.CharField(
+        _("mode"), max_length=10, choices=WebinarMode.choices, default=WebinarMode.OFFLINE
+    )
+    starts_at = models.DateTimeField(_("starts at"))
+    ends_at = models.DateTimeField(_("ends at"))
+    location = models.CharField(_("location"), max_length=255, blank=True)
+    online_url = models.URLField(_("online meeting URL"), blank=True)
+    capacity = models.PositiveIntegerField(_("capacity"), null=True, blank=True)
+    registration_opens_at = models.DateTimeField(_("registration opens at"), null=True, blank=True)
+    registration_closes_at = models.DateTimeField(_("registration closes at"), null=True, blank=True)
+    auto_issue_certificate = models.BooleanField(
+        _("auto-issue certificate on check-in"),
+        default=True,
+        help_text=_("Issue a certificate automatically once an attendee checks in."),
+    )
+    attendance_secret = models.CharField(
+        _("attendance signing secret"), max_length=64, default=generate_attendance_secret
+    )
+    status = models.CharField(
+        _("status"),
+        max_length=20,
+        choices=WebinarStatus.choices,
+        default=WebinarStatus.DRAFT,
+        db_index=True,
+    )
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        ordering = ["-starts_at"]
+
+    def __str__(self) -> str:
+        return f"Webinar: {self.post.title}"
+
+    @property
+    def is_registration_open(self) -> bool:
+        if self.status != WebinarStatus.PUBLISHED:
+            return False
+        now = timezone.now()
+        if self.registration_opens_at and now < self.registration_opens_at:
+            return False
+        if self.registration_closes_at and now > self.registration_closes_at:
+            return False
+        return True
+
+    @property
+    def is_full(self) -> bool:
+        if not self.capacity:
+            return False
+        return (
+            self.registrations.filter(status=WebinarRegistrationStatus.REGISTERED).count()
+            >= self.capacity
+        )
+
+
+class WebinarRegistration(models.Model):
+    """One participant per webinar; also carries their attendance record."""
+
+    webinar = models.ForeignKey(Webinar, on_delete=models.CASCADE, related_name="registrations")
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="webinar_registrations"
+    )
+    status = models.CharField(
+        _("status"),
+        max_length=20,
+        choices=WebinarRegistrationStatus.choices,
+        default=WebinarRegistrationStatus.REGISTERED,
+        db_index=True,
+    )
+    registered_at = models.DateTimeField(_("registered at"), auto_now_add=True)
+    checked_in_at = models.DateTimeField(_("checked in at"), null=True, blank=True)
+    checked_out_at = models.DateTimeField(_("checked out at"), null=True, blank=True)
+    check_in_method = models.CharField(_("check-in method"), max_length=20, blank=True)
+    certificate = models.ForeignKey(
+        Certificate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="webinar_registration",
+    )
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    class Meta:
+        ordering = ["-registered_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["webinar", "user"], name="uniq_webinar_user"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user.email} @ {self.webinar_id}"
+
+    @property
+    def attended(self) -> bool:
+        return self.checked_in_at is not None
 
 
 class Broadcast(models.Model):

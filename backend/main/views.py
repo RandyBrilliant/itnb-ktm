@@ -1,5 +1,6 @@
 """ViewSets for main domain resources."""
 
+import base64
 import logging
 
 from django.db import transaction
@@ -24,6 +25,7 @@ from account.permissions import (
     user_can_manage_benefits,
 )
 from account.models import UserRole
+from account.services.qr_generation import generate_qr_code, save_qr_to_bytes
 from main.models import (
     Benefit,
     BenefitCategory,
@@ -33,11 +35,23 @@ from main.models import (
     CertificateStatus,
     Event,
     Post,
+    Webinar,
+    WebinarMode,
+    WebinarRegistration,
+    WebinarRegistrationStatus,
 )
-from main.tasks import process_certificate_program_batch
+from main.tasks import issue_webinar_certificate, process_certificate_program_batch
 from main.services.benefit_filtering import get_benefits_for_user
 from main.services.certificate_generation import generate_certificate_pdf_bytes
 from main.services.certificate_issuance import issue_program_certificate
+from main.services.webinar_attendance import (
+    TOKEN_STEP_SECONDS,
+    VALID_PHASES,
+    generate_attendance_token,
+    seconds_until_next_window,
+    verify_attendance_token,
+)
+from main.services.webinar_export import build_webinar_participants_workbook
 from main.serializers import (
     BenefitCategorySerializer,
     BenefitSerializer,
@@ -50,6 +64,9 @@ from main.serializers import (
     EventSerializer,
     PostCreateUpdateSerializer,
     PostSerializer,
+    WebinarCreateUpdateSerializer,
+    WebinarRegistrationSerializer,
+    WebinarSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -472,3 +489,259 @@ class EventViewSet(viewsets.ModelViewSet):
             ),
             status=status.HTTP_200_OK,
         )
+
+
+class WebinarViewSet(viewsets.ModelViewSet):
+    """
+    Webinars: admin/staff create them (auto-creating a published announcement
+    Post), students register and check in/out, and certificates are auto-issued
+    on a valid check-in when a certificate template is attached.
+    """
+
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["mode", "status"]
+    search_fields = ["post__title", "post__body"]
+    ordering_fields = ["starts_at", "created_at"]
+    ordering = ["-starts_at"]
+
+    def get_queryset(self):
+        base = Webinar.objects.select_related(
+            "post", "post__author", "certificate_program"
+        )
+        if self.request.user.role in (UserRole.STAFF, UserRole.ADMIN):
+            return base.all()
+        return base.filter(status="PUBLISHED", post__is_published=True)
+
+    def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return WebinarCreateUpdateSerializer
+        return WebinarSerializer
+
+    def get_permissions(self):
+        admin_actions = {
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "registrations",
+            "participants",
+            "attendance_token",
+        }
+        if self.action in admin_actions:
+            return [CanPostNews()]
+        return [IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        webinar = serializer.save()
+        output = WebinarSerializer(webinar, context=self.get_serializer_context())
+        return Response(
+            success_response(data=output.data, detail="Webinar created.", code=ApiCode.SUCCESS),
+            status=status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        webinar = serializer.save()
+        output = WebinarSerializer(webinar, context=self.get_serializer_context())
+        return Response(
+            success_response(data=output.data, detail="Webinar updated.", code=ApiCode.SUCCESS),
+            status=status.HTTP_200_OK,
+        )
+
+    def perform_destroy(self, instance):
+        post = instance.post
+        instance.delete()
+        post.delete()
+
+    # -- Student: registration ------------------------------------------------
+
+    @action(detail=True, methods=["post", "delete"], permission_classes=[IsAuthenticated])
+    def register(self, request, pk=None):
+        webinar = self.get_object()
+        existing = WebinarRegistration.objects.filter(webinar=webinar, user=request.user).first()
+
+        if request.method == "DELETE":
+            if not existing or existing.status == WebinarRegistrationStatus.CANCELLED:
+                return Response(
+                    error_response(detail="You are not registered for this webinar."),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            existing.status = WebinarRegistrationStatus.CANCELLED
+            existing.save(update_fields=["status", "updated_at"])
+            return Response(
+                success_response(
+                    data=WebinarSerializer(webinar, context=self.get_serializer_context()).data,
+                    detail="Registration cancelled.",
+                    code=ApiCode.SUCCESS,
+                ),
+                status=status.HTTP_200_OK,
+            )
+
+        if not webinar.is_registration_open:
+            return Response(
+                error_response(detail="Registration is not open for this webinar."),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if existing and existing.status == WebinarRegistrationStatus.REGISTERED:
+            return Response(
+                success_response(
+                    data=WebinarSerializer(webinar, context=self.get_serializer_context()).data,
+                    detail="You are already registered.",
+                    code=ApiCode.SUCCESS,
+                ),
+                status=status.HTTP_200_OK,
+            )
+
+        target = (
+            WebinarRegistrationStatus.WAITLISTED
+            if webinar.is_full
+            else WebinarRegistrationStatus.REGISTERED
+        )
+        if existing:
+            existing.status = target
+            existing.save(update_fields=["status", "updated_at"])
+        else:
+            WebinarRegistration.objects.create(webinar=webinar, user=request.user, status=target)
+
+        detail = "Added to the waitlist." if target == WebinarRegistrationStatus.WAITLISTED else "Registered."
+        return Response(
+            success_response(
+                data=WebinarSerializer(webinar, context=self.get_serializer_context()).data,
+                detail=detail,
+                code=ApiCode.SUCCESS,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+    # -- Student: attendance --------------------------------------------------
+
+    @action(detail=True, methods=["post"], url_path="check-in", permission_classes=[IsAuthenticated])
+    def check_in(self, request, pk=None):
+        return self._record_attendance(request, phase="in")
+
+    @action(detail=True, methods=["post"], url_path="check-out", permission_classes=[IsAuthenticated])
+    def check_out(self, request, pk=None):
+        return self._record_attendance(request, phase="out")
+
+    def _record_attendance(self, request, *, phase):
+        webinar = self.get_object()
+        now = timezone.now()
+
+        raw = str(request.data.get("token") or "").strip()
+        if ":" in raw:  # accept a scanned "WEBINAR:<id>:<phase>:<token>" payload
+            raw = raw.split(":")[-1].strip()
+
+        valid = False
+        method = ""
+        if raw:
+            valid = verify_attendance_token(webinar.attendance_secret, phase, raw)
+            method = "TOKEN"
+        elif webinar.mode in (WebinarMode.ONLINE, WebinarMode.HYBRID):
+            valid = webinar.starts_at <= now <= webinar.ends_at
+            method = "ONLINE"
+
+        if not valid:
+            return Response(
+                error_response(detail="Invalid or expired attendance code."),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reg, _created = WebinarRegistration.objects.get_or_create(
+            webinar=webinar,
+            user=request.user,
+            defaults={"status": WebinarRegistrationStatus.REGISTERED},
+        )
+        if reg.status == WebinarRegistrationStatus.CANCELLED:
+            reg.status = WebinarRegistrationStatus.REGISTERED
+
+        if phase == "in":
+            if reg.checked_in_at is None:
+                reg.checked_in_at = now
+                reg.check_in_method = method
+        else:
+            reg.checked_out_at = now
+            if reg.checked_in_at is None:
+                reg.checked_in_at = now
+                reg.check_in_method = method
+        reg.save()
+
+        should_issue = (
+            reg.checked_in_at is not None
+            and not reg.certificate_id
+            and webinar.auto_issue_certificate
+            and webinar.certificate_program_id
+        )
+        if should_issue:
+            reg_id = reg.id
+            transaction.on_commit(lambda: issue_webinar_certificate.delay(reg_id))
+
+        detail = "Checked in." if phase == "in" else "Checked out."
+        return Response(
+            success_response(
+                data=WebinarSerializer(webinar, context=self.get_serializer_context()).data,
+                detail=detail,
+                code=ApiCode.SUCCESS,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+    # -- Admin: attendance token, participants --------------------------------
+
+    @action(detail=True, methods=["get"], url_path="attendance-token", permission_classes=[CanPostNews])
+    def attendance_token(self, request, pk=None):
+        webinar = self.get_object()
+        phase = request.query_params.get("phase", "in")
+        if phase not in VALID_PHASES:
+            phase = "in"
+
+        token = generate_attendance_token(webinar.attendance_secret, phase)
+        payload = f"WEBINAR:{webinar.id}:{phase}:{token}"
+        qr_bytes = save_qr_to_bytes(generate_qr_code(payload))
+        qr_data_url = "data:image/png;base64," + base64.b64encode(qr_bytes.getvalue()).decode()
+
+        return Response(
+            success_response(
+                data={
+                    "token": token,
+                    "phase": phase,
+                    "payload": payload,
+                    "qr_data_url": qr_data_url,
+                    "step_seconds": TOKEN_STEP_SECONDS,
+                    "expires_in": seconds_until_next_window(),
+                },
+                code=ApiCode.SUCCESS,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["get"], permission_classes=[CanPostNews])
+    def registrations(self, request, pk=None):
+        webinar = self.get_object()
+        queryset = webinar.registrations.select_related("user", "certificate").all()
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        page = self.paginate_queryset(queryset)
+        serializer = WebinarRegistrationSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=["get"], permission_classes=[CanPostNews])
+    def participants(self, request, pk=None):
+        webinar = self.get_object()
+        buf = build_webinar_participants_workbook(webinar)
+        response = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="webinar_{webinar.id}_participants.xlsx"'
+        )
+        return response

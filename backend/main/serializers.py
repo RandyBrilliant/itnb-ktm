@@ -3,6 +3,7 @@
 import json
 
 from django.http import QueryDict
+from django.utils import timezone
 from rest_framework import serializers
 
 from account.models import CustomUser, UserRole
@@ -14,6 +15,10 @@ from main.models import (
     default_certificate_layout,
     Event,
     Post,
+    PostCategory,
+    Webinar,
+    WebinarRegistration,
+    WebinarStatus,
 )
 
 ROLE_CHOICES = [choice.value for choice in UserRole]
@@ -319,3 +324,206 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ["event_date", "event_location", "capacity"]
+
+
+class WebinarRegistrationBriefSerializer(serializers.ModelSerializer):
+    """Compact view of the current user's own registration (nested in Webinar)."""
+
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    attended = serializers.BooleanField(read_only=True)
+    certificate_id = serializers.IntegerField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = WebinarRegistration
+        fields = [
+            "id",
+            "status",
+            "status_display",
+            "registered_at",
+            "checked_in_at",
+            "checked_out_at",
+            "attended",
+            "certificate_id",
+        ]
+        read_only_fields = fields
+
+
+class WebinarRegistrationSerializer(serializers.ModelSerializer):
+    """Full registration row for the admin participant list."""
+
+    user = UserSummarySerializer(read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    attended = serializers.BooleanField(read_only=True)
+    certificate = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WebinarRegistration
+        fields = [
+            "id",
+            "user",
+            "status",
+            "status_display",
+            "registered_at",
+            "checked_in_at",
+            "checked_out_at",
+            "check_in_method",
+            "attended",
+            "certificate",
+        ]
+        read_only_fields = fields
+
+    def get_certificate(self, obj):
+        if not obj.certificate_id:
+            return None
+        return {"id": obj.certificate_id, "title": obj.certificate.title}
+
+
+class WebinarSerializer(serializers.ModelSerializer):
+    post = PostSerializer(read_only=True)
+    certificate_program = CertificateProgramStubSerializer(read_only=True)
+    mode_display = serializers.CharField(source="get_mode_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    is_registration_open = serializers.BooleanField(read_only=True)
+    is_full = serializers.BooleanField(read_only=True)
+    registration_count = serializers.SerializerMethodField()
+    attendee_count = serializers.SerializerMethodField()
+    my_registration = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Webinar
+        fields = [
+            "id",
+            "post",
+            "mode",
+            "mode_display",
+            "starts_at",
+            "ends_at",
+            "location",
+            "online_url",
+            "capacity",
+            "registration_opens_at",
+            "registration_closes_at",
+            "certificate_program",
+            "auto_issue_certificate",
+            "status",
+            "status_display",
+            "is_registration_open",
+            "is_full",
+            "registration_count",
+            "attendee_count",
+            "my_registration",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+    def get_registration_count(self, obj):
+        return obj.registrations.exclude(status="CANCELLED").count()
+
+    def get_attendee_count(self, obj):
+        return obj.registrations.filter(checked_in_at__isnull=False).count()
+
+    def get_my_registration(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user or not request.user.is_authenticated:
+            return None
+        reg = obj.registrations.filter(user=request.user).first()
+        if not reg:
+            return None
+        return WebinarRegistrationBriefSerializer(reg).data
+
+
+class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
+    """
+    Create/update a webinar together with its backing Post (announcement).
+    `is_published` toggles both the post visibility and the webinar status.
+    """
+
+    title = serializers.CharField(max_length=255, required=False)
+    body = serializers.CharField(required=False, allow_blank=True)
+    image = serializers.ImageField(required=False, allow_null=True)
+    image_url = serializers.URLField(required=False, allow_blank=True)
+    is_published = serializers.BooleanField(required=False, default=False)
+    certificate_program = serializers.PrimaryKeyRelatedField(
+        queryset=CertificateProgram.objects.all(), required=False, allow_null=True
+    )
+
+    class Meta:
+        model = Webinar
+        fields = [
+            "title",
+            "body",
+            "image",
+            "image_url",
+            "is_published",
+            "mode",
+            "starts_at",
+            "ends_at",
+            "location",
+            "online_url",
+            "capacity",
+            "registration_opens_at",
+            "registration_closes_at",
+            "certificate_program",
+            "auto_issue_certificate",
+        ]
+
+    def validate(self, attrs):
+        starts_at = attrs.get("starts_at", getattr(self.instance, "starts_at", None))
+        ends_at = attrs.get("ends_at", getattr(self.instance, "ends_at", None))
+        if starts_at and ends_at and ends_at < starts_at:
+            raise serializers.ValidationError({"ends_at": "End time must be after the start time."})
+        if self.instance is None and not attrs.get("title"):
+            raise serializers.ValidationError({"title": "This field is required."})
+        return attrs
+
+    def _pop_post_fields(self, validated):
+        return {
+            key: validated.pop(key)
+            for key in ("title", "body", "image", "image_url")
+            if key in validated
+        }
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        is_published = validated_data.pop("is_published", False)
+        post_fields = self._pop_post_fields(validated_data)
+        post_fields.setdefault("body", "")
+
+        post = Post.objects.create(
+            author=request.user,
+            category=PostCategory.EVENT,
+            is_published=is_published,
+            published_at=timezone.now() if is_published else None,
+            **post_fields,
+        )
+        return Webinar.objects.create(
+            post=post,
+            status=WebinarStatus.PUBLISHED if is_published else WebinarStatus.DRAFT,
+            **validated_data,
+        )
+
+    def update(self, instance, validated_data):
+        is_published = validated_data.pop("is_published", None)
+        post_fields = self._pop_post_fields(validated_data)
+
+        post = instance.post
+        for key, value in post_fields.items():
+            setattr(post, key, value)
+
+        if is_published is not None:
+            post.is_published = is_published
+            if is_published and post.published_at is None:
+                post.published_at = timezone.now()
+            elif not is_published:
+                post.published_at = None
+            if instance.status in (WebinarStatus.DRAFT, WebinarStatus.PUBLISHED):
+                instance.status = (
+                    WebinarStatus.PUBLISHED if is_published else WebinarStatus.DRAFT
+                )
+        post.save()
+
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+        return instance

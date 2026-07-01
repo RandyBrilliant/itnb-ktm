@@ -11,6 +11,40 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(ignore_result=True)
+def issue_webinar_certificate(registration_id: int) -> None:
+    """Issue a certificate for a checked-in webinar attendee (idempotent)."""
+    from main.models import WebinarRegistration
+    from main.services.certificate_issuance import issue_program_certificate_for_user
+
+    try:
+        registration = WebinarRegistration.objects.select_related(
+            "webinar", "webinar__certificate_program", "user", "certificate"
+        ).get(pk=registration_id)
+    except WebinarRegistration.DoesNotExist:
+        logger.error("WebinarRegistration %s not found", registration_id)
+        return
+
+    webinar = registration.webinar
+    program = webinar.certificate_program
+
+    if registration.certificate_id:
+        return
+    if not webinar.auto_issue_certificate or not program:
+        return
+    if registration.checked_in_at is None:
+        return
+
+    try:
+        cert = issue_program_certificate_for_user(program, registration.user)
+    except Exception as exc:
+        logger.exception("issue_webinar_certificate failed for %s: %s", registration_id, exc)
+        return
+
+    registration.certificate = cert
+    registration.save(update_fields=["certificate", "updated_at"])
+
+
+@shared_task(ignore_result=True)
 def process_certificate_program_batch(program_id: int) -> None:
     """Generate personalized PDFs for every spreadsheet row that maps to a portal user."""
     from main.models import (

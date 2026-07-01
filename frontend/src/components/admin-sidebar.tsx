@@ -22,6 +22,7 @@ const primaryMenuItems: MenuItem[] = [
   { title: "Staff Records", href: "/admin/users/staff", icon: "badge" },
   { title: "Lecturer Records", href: "/admin/users/lecturers", icon: "school" },
   { title: "Certificates", href: "/admin/certificates", icon: "verified_user" },
+  { title: "Webinars", href: "/admin/webinars", icon: "co_present" },
   { title: "Student Benefits", href: "/admin/benefits", icon: "sell" },
   { title: "Campus News", href: "/admin/posts", icon: "newspaper" },
 ]

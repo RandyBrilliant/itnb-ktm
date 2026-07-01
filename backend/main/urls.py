@@ -14,6 +14,7 @@ router.register(r"benefit-categories", views.BenefitCategoryViewSet, basename="b
 router.register(r"benefits", views.BenefitViewSet, basename="benefit")
 router.register(r"posts", views.PostViewSet, basename="post")
 router.register(r"events", views.EventViewSet, basename="event")
+router.register(r"webinars", views.WebinarViewSet, basename="webinar")
 
 urlpatterns = [
     path("", include(router.urls)),

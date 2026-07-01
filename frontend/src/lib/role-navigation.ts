@@ -17,6 +17,7 @@ const studentItems: RoleNavItem[] = [
     href: "/student/certificates",
   },
   { id: "scores", label: "Scores", icon: "school", href: "/student/scores" },
+  { id: "webinars", label: "Webinars", icon: "co_present", href: "/student/webinars" },
   { id: "news", label: "News", icon: "newspaper", href: "/student/news" },
 ]
 

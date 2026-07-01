@@ -31,6 +31,16 @@ const AdminStudentRecordEditPage = lazy(() =>
 const AdminPostsPage = lazy(() => import("@/pages/admin-posts-page").then((m) => ({ default: m.AdminPostsPage })))
 const AdminPostCreatePage = lazy(() => import("@/pages/admin-post-create-page").then((m) => ({ default: m.AdminPostCreatePage })))
 const AdminPostEditPage = lazy(() => import("@/pages/admin-post-edit-page").then((m) => ({ default: m.AdminPostEditPage })))
+const AdminWebinarsPage = lazy(() => import("@/pages/admin-webinars-page").then((m) => ({ default: m.AdminWebinarsPage })))
+const AdminWebinarCreatePage = lazy(() =>
+  import("@/pages/admin-webinar-create-page").then((m) => ({ default: m.AdminWebinarCreatePage }))
+)
+const AdminWebinarEditPage = lazy(() =>
+  import("@/pages/admin-webinar-edit-page").then((m) => ({ default: m.AdminWebinarEditPage }))
+)
+const AdminWebinarAttendancePage = lazy(() =>
+  import("@/pages/admin-webinar-attendance-page").then((m) => ({ default: m.AdminWebinarAttendancePage }))
+)
 const AdminBenefitsPage = lazy(() => import("@/pages/admin-benefits-page").then((m) => ({ default: m.AdminBenefitsPage })))
 const AdminBenefitCreatePage = lazy(() =>
   import("@/pages/admin-benefit-create-page").then((m) => ({ default: m.AdminBenefitCreatePage }))
@@ -57,6 +67,7 @@ const StudentCertificatesPage = lazy(() => import("@/pages/student/certificates"
 const StudentNewsPage = lazy(() => import("@/pages/student/news").then((m) => ({ default: m.StudentNewsPage })))
 const StudentPerksPage = lazy(() => import("@/pages/student/perks").then((m) => ({ default: m.StudentPerksPage })))
 const StudentScoresPage = lazy(() => import("@/pages/student/scores").then((m) => ({ default: m.StudentScoresPage })))
+const StudentWebinarsPage = lazy(() => import("@/pages/student/webinars").then((m) => ({ default: m.StudentWebinarsPage })))
 const NewsPage = lazy(() => import("@/pages/shared/news-page").then((m) => ({ default: m.NewsPage })))
 const PerksPage = lazy(() => import("@/pages/shared/perks-page").then((m) => ({ default: m.PerksPage })))
 const NewsDetailPage = lazy(() => import("@/pages/shared/news-detail-page").then((m) => ({ default: m.NewsDetailPage })))
@@ -179,6 +190,10 @@ function App() {
               <Route path="certificates/new" element={<AdminCertificateProgramCreatePage />} />
               <Route path="certificates/:programId" element={<AdminCertificateProgramDetailPage />} />
               <Route path="certificates" element={<AdminCertificatesPage />} />
+              <Route path="webinars/new" element={<AdminWebinarCreatePage />} />
+              <Route path="webinars/:id/edit" element={<AdminWebinarEditPage />} />
+              <Route path="webinars/:id/attendance" element={<AdminWebinarAttendancePage />} />
+              <Route path="webinars" element={<AdminWebinarsPage />} />
               <Route path="benefits/new" element={<AdminBenefitCreatePage />} />
               <Route path="benefits/:id/edit" element={<AdminBenefitEditPage />} />
               <Route path="benefits" element={<AdminBenefitsPage />} />
@@ -371,6 +386,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["STUDENT"]}>
                   <StudentNewsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/webinars"
+              element={
+                <ProtectedRoute allowedRoles={["STUDENT"]}>
+                  <StudentWebinarsPage />
                 </ProtectedRoute>
               }
             />
