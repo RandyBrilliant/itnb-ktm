@@ -1,6 +1,8 @@
 # ITNB Hub – production
-# Usage: docker compose -f docker-compose.prod.yml up -d --build
-# .env: SECRET_KEY, DEBUG=False, ALLOWED_HOSTS, SQL_*, DATABASE_URL, CELERY_BROKER_URL (or defaults)
+# Usage:
+#   First deploy:  ./deploy/deploy-fresh.sh
+#   CI deploy:     APP_IMAGE=ghcr.io/<owner>/itnb-hub-api:<sha> ./deploy/deploy-registry.sh
+# .env: SECRET_KEY, DEBUG=False, ALLOWED_HOSTS, SQL_*, DATABASE_URL, CELERY_BROKER_URL, APP_IMAGE (optional)
 
 services:
   redis:
@@ -21,7 +23,9 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/itnb-hub.conf:/etc/nginx/conf.d/itnb-hub.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/itnb-hub.ssl.conf:/etc/nginx/conf.d/itnb-hub.ssl.conf:ro
+      - ./nginx/certbot/www:/var/www/certbot
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - media_volume:/app/media:ro
       - static_volume:/app/staticfiles:ro
       - ./logs/nginx:/var/log/nginx
@@ -35,7 +39,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
+    image: ${APP_IMAGE:-itnb-hub-api:latest}
     container_name: itnb-hub-backend
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     command: ./entrypoint.sh daphne -b 0.0.0.0 -p 8000 --proxy-headers backend.asgi:application
     env_file:
       - .env
@@ -65,6 +72,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
+    image: ${APP_IMAGE:-itnb-hub-api:latest}
     container_name: itnb-hub-celery
     user: "1000:1000"
     command: celery -A backend worker -l info
@@ -93,6 +101,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
+    image: ${APP_IMAGE:-itnb-hub-api:latest}
     container_name: itnb-hub-celery-beat
     user: "1000:1000"
     command: celery -A backend beat -l info

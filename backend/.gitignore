@@ -51,7 +51,10 @@ static/
 
 # Production deployment files
 nginx/ssl/
-nginx/logs/
+nginx/certbot/www/*
+!nginx/certbot/www/.gitkeep
+.deploy-last-good-image
+.backups/
 
 # Celery
 celerybeat-schedule

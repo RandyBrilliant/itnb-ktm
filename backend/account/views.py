@@ -384,7 +384,7 @@ class HealthCheckView(APIView):
     authentication_classes = []
 
     def get(self, request):
-        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+        return Response({"status": "ok", "success": True}, status=status.HTTP_200_OK)
 
 
 class ForgotPasswordRequestView(APIView):

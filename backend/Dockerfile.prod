@@ -51,4 +51,7 @@ RUN mkdir -p /app/media/account/users \
 
 EXPOSE 8000
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
+
 CMD ["./entrypoint.sh", "daphne", "-b", "0.0.0.0", "-p", "8000", "--proxy-headers", "backend.asgi:application"]

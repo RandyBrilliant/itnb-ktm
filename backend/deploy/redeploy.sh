@@ -5,7 +5,7 @@
 #
 # DESCRIPTION:
 #   Pulls latest code, rebuilds Docker images, and redeploys services
-#   Safe for production (no data loss)
+#   Prefer ./deploy/deploy-registry.sh for production (GHCR + auto-rollback)
 #
 # USAGE:
 #   chmod +x deploy/redeploy.sh
