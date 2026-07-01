@@ -56,6 +56,7 @@ const StudentIDPage = lazy(() => import("@/pages/student/id").then((m) => ({ def
 const StudentCertificatesPage = lazy(() => import("@/pages/student/certificates").then((m) => ({ default: m.StudentCertificatesPage })))
 const StudentNewsPage = lazy(() => import("@/pages/student/news").then((m) => ({ default: m.StudentNewsPage })))
 const StudentPerksPage = lazy(() => import("@/pages/student/perks").then((m) => ({ default: m.StudentPerksPage })))
+const StudentScoresPage = lazy(() => import("@/pages/student/scores").then((m) => ({ default: m.StudentScoresPage })))
 const NewsPage = lazy(() => import("@/pages/shared/news-page").then((m) => ({ default: m.NewsPage })))
 const PerksPage = lazy(() => import("@/pages/shared/perks-page").then((m) => ({ default: m.PerksPage })))
 const NewsDetailPage = lazy(() => import("@/pages/shared/news-detail-page").then((m) => ({ default: m.NewsDetailPage })))
@@ -354,6 +355,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["STUDENT"]}>
                   <CertificateDetailPage role="STUDENT" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/scores"
+              element={
+                <ProtectedRoute allowedRoles={["STUDENT"]}>
+                  <StudentScoresPage />
                 </ProtectedRoute>
               }
             />

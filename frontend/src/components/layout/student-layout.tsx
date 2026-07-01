@@ -16,12 +16,7 @@ export function StudentLayout({
   activeTab: _activeTab,
 }: StudentLayoutProps) {
   return (
-    <RoleShell
-      role="STUDENT"
-      title={title || "IT&B HUB"}
-      subtitle="Academic Year 2023/24"
-      avatarUrl={profileImage}
-    >
+    <RoleShell role="STUDENT" title={title || "IT&B HUB"} avatarUrl={profileImage}>
       <AnimatedPage className="mx-auto max-w-2xl">
         {children}
       </AnimatedPage>

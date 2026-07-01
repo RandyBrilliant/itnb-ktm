@@ -9,17 +9,17 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from account.views import HealthCheckView
+from rest_framework_simplejwt.views import TokenRefreshView
+from account.views import HealthCheckView, HubTokenObtainPairView
 
 urlpatterns = [
     # Admin panel
     path("admin/", admin.site.urls),
     
     # JWT Token endpoints
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/", HubTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("api/auth/token/", TokenObtainPairView.as_view(), name="auth_token_obtain_pair"),
+    path("api/auth/token/", HubTokenObtainPairView.as_view(), name="auth_token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="auth_token_refresh"),
     path("health/", HealthCheckView.as_view(), name="health"),
     
@@ -28,6 +28,9 @@ urlpatterns = [
     
     # Main app (if needed)
     path("api/", include("main.urls")),
+
+    # Academic (SIS read-only scores)
+    path("api/", include("academic.urls")),
 ]
 
 # Serve media files in development

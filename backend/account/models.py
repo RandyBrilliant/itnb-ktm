@@ -116,6 +116,18 @@ class CustomUser(AbstractUser):
         db_index=True,
         help_text=_("Official ID (NIM/NIP/etc.) for matching certificates and records."),
     )
+    place_of_birth = models.CharField(
+        _("place of birth"),
+        max_length=120,
+        blank=True,
+        help_text=_("Birth city/place shown on student ID card."),
+    )
+    date_of_birth = models.DateField(
+        _("date of birth"),
+        null=True,
+        blank=True,
+        help_text=_("Birth date shown on student ID card."),
+    )
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     username = None
@@ -410,6 +422,12 @@ class EmailVerificationCode(models.Model):
         default=0,
         help_text=_("Jumlah percobaan verifikasi gagal."),
     )
+    pending_email = models.EmailField(
+        _("pending email"),
+        null=True,
+        blank=True,
+        help_text=_("New email address to apply after successful verification."),
+    )
 
     MAX_ATTEMPTS = 5
     CODE_EXPIRY_MINUTES = 10
@@ -441,7 +459,7 @@ class EmailVerificationCode(models.Model):
         return f"{secrets.randbelow(1000000):06d}"
 
     @classmethod
-    def create_for_user(cls, user):
+    def create_for_user(cls, user, *, pending_email: str | None = None):
         """
         Create a new verification code for a user.
         Invalidates any existing unused codes for this user.
@@ -458,12 +476,13 @@ class EmailVerificationCode(models.Model):
             user=user,
             code=code,
             expires_at=expires_at,
+            pending_email=(pending_email or "").strip().lower() or None,
         )
 
     @classmethod
     def verify_code(cls, email: str, code: str):
         """
-        Verify a code for the given email.
+        Verify a code for the given email (public / legacy flow).
         Returns the user if valid, None otherwise.
         Also increments attempt count on failure.
         """
@@ -474,25 +493,66 @@ class EmailVerificationCode(models.Model):
                 is_used=False,
             )
         except cls.DoesNotExist:
-            # Increment attempts on all active codes for this email
             cls.objects.filter(
                 user__email__iexact=email,
                 is_used=False,
             ).update(attempts=models.F("attempts") + 1)
             return None
 
+        return cls._complete_verification(verification)
+
+    @classmethod
+    def verify_code_for_user(cls, user, code: str):
+        """Verify a code for an authenticated user. Returns updated user or None."""
+        try:
+            verification = cls.objects.select_related("user").get(
+                user=user,
+                code=code,
+                is_used=False,
+            )
+        except cls.DoesNotExist:
+            cls.objects.filter(user=user, is_used=False).update(
+                attempts=models.F("attempts") + 1
+            )
+            return None
+
+        return cls._complete_verification(verification)
+
+    @classmethod
+    def _complete_verification(cls, verification):
         if not verification.is_valid:
             return None
 
-        # Mark as used and verify the user's email
         verification.is_used = True
         verification.save(update_fields=["is_used"])
 
         user = verification.user
-        if not user.email_verified:
+        pending_email = (verification.pending_email or "").strip().lower()
+
+        if pending_email:
+            if CustomUser.objects.exclude(pk=user.pk).filter(email__iexact=pending_email).exists():
+                return None
+            user.email = pending_email
+            user.email_verified = True
+            user.email_verified_at = timezone.now()
+            user.save(update_fields=["email", "email_verified", "email_verified_at"])
+        elif not user.email_verified:
             user.email_verified = True
             user.email_verified_at = timezone.now()
             user.save(update_fields=["email_verified", "email_verified_at"])
 
         return user
+
+    @classmethod
+    def get_pending_email_change(cls, user) -> str | None:
+        verification = (
+            cls.objects.filter(user=user, is_used=False)
+            .exclude(pending_email__isnull=True)
+            .exclude(pending_email="")
+            .order_by("-created_at")
+            .first()
+        )
+        if verification and verification.is_valid:
+            return verification.pending_email
+        return None
 

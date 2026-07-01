@@ -1,8 +1,10 @@
 import type { CSSProperties, ReactNode } from "react"
-import { motion } from "framer-motion"
 
 /** Bundled blank template — no printed field labels (avoids ghosting with HTML labels). */
 export const CARD_BACKGROUND_URL = "/img/card-bg.jpg"
+
+/** Bundled back template. */
+export const CARD_BACK_BACKGROUND_URL = "/img/card-bg-back.png"
 
 /** Reference card proportions (643×1024). */
 export const CARD_ASPECT = "643 / 1024"
@@ -23,6 +25,7 @@ interface DigitalIdCardProps {
   frontBackgroundUrl: string
   backBackgroundUrl: string
   data: DigitalIdCardData
+  onFlip?: () => void
   onFrontBackgroundError?: () => void
   onBackBackgroundError?: () => void
   onPhotoError?: () => void
@@ -72,28 +75,32 @@ function CardFace({
   onBackgroundError,
   children,
   className = "",
+  imageFit = "fill",
 }: {
   backgroundUrl: string
   backgroundFailed?: boolean
   onBackgroundError?: () => void
   children: ReactNode
   className?: string
+  imageFit?: "fill" | "cover"
 }) {
   return (
     <div
-      className={`absolute inset-0 overflow-hidden rounded-xl border border-[#d9d9d9] bg-white [backface-visibility:hidden] ${className}`}
+      className={`absolute inset-0 overflow-hidden rounded-xl border border-[#d9d9d9] bg-white [backface-visibility:hidden] [-webkit-backface-visibility:hidden] ${className}`}
     >
       {!backgroundFailed && backgroundUrl ? (
         <img
           src={backgroundUrl}
           alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-fill"
+          className={`pointer-events-none absolute inset-0 h-full w-full ${
+            imageFit === "cover" ? "object-cover" : "object-fill"
+          }`}
           onError={onBackgroundError}
         />
       ) : (
         <div className="absolute inset-0 bg-white" />
       )}
-      <div className="relative z-[1] h-full">{children}</div>
+      {children ? <div className="relative z-[1] h-full">{children}</div> : null}
     </div>
   )
 }
@@ -189,6 +196,7 @@ export function DigitalIdCard({
   frontBackgroundUrl,
   backBackgroundUrl,
   data,
+  onFlip,
   onFrontBackgroundError,
   onBackBackgroundError,
   onPhotoError,
@@ -197,10 +205,21 @@ export function DigitalIdCard({
   photoFailed,
 }: DigitalIdCardProps) {
   return (
-    <motion.div
-      animate={{ rotateY: flipped ? 180 : 0 }}
-      transition={{ duration: 0.6, ease: "easeInOut" }}
-      className="id-card-text-scope relative mx-auto w-full max-w-[340px] [transform-style:preserve-3d]"
+    <div
+      role={onFlip ? "button" : undefined}
+      tabIndex={onFlip ? 0 : undefined}
+      aria-label={onFlip ? (flipped ? "Show front of ID card" : "Show back of ID card") : undefined}
+      onClick={onFlip}
+      onKeyDown={(e) => {
+        if (!onFlip) return
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onFlip()
+        }
+      }}
+      className={`id-card-text-scope relative mx-auto w-full max-w-[340px] transition-transform duration-500 ease-in-out [transform-style:preserve-3d] [-webkit-transform-style:preserve-3d] ${
+        onFlip ? "cursor-pointer select-none" : ""
+      } ${flipped ? "[transform:rotateY(180deg)]" : "[transform:rotateY(0deg)]"}`}
       style={{ aspectRatio: CARD_ASPECT }}
     >
       <CardFace
@@ -216,9 +235,10 @@ export function DigitalIdCard({
         backgroundFailed={backBackgroundFailed}
         onBackgroundError={onBackBackgroundError}
         className="[transform:rotateY(180deg)]"
+        imageFit="cover"
       >
         {backBackgroundFailed || !backBackgroundUrl ? <CardBackContent /> : null}
       </CardFace>
-    </motion.div>
+    </div>
   )
 }

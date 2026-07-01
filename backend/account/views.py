@@ -35,6 +35,7 @@ from .models import (
     StaffProfile,
     AlumniProfile,
     DigitalCard,
+    EmailVerificationCode,
 )
 from .serializers import (
     UserDetailSerializer,
@@ -47,11 +48,15 @@ from .serializers import (
     ForgotPasswordRequestSerializer,
     PasswordResetConfirmSerializer,
     ChangePasswordSerializer,
+    RequestEmailChangeSerializer,
+    VerifyEmailCodeSerializer,
+    HubTokenObtainPairSerializer,
 )
 from .permissions import (
     IsAdmin,
     IsBackofficeRole,
 )
+from .throttles import AuthPublicRateThrottle, AuthRateThrottle
 from .api_responses import (
     success_response,
     error_response,
@@ -60,7 +65,9 @@ from .api_responses import (
 )
 from .exceptions import DeleteNotAllowed
 from .services.qr_generation import generate_qr_code, save_qr_to_bytes
-from .services.student_import import parse_student_import_xlsx
+from .services.email_verification import create_and_send_verification_code
+from .services.student_import import build_student_import_workbook, parse_student_import_xlsx
+from .services.student_photo_import import extract_photo_entries, normalize_avatar
 from .services.card_generation import (
     generate_digital_card_image,
     save_card_image_to_bytes,
@@ -70,9 +77,11 @@ logger = logging.getLogger(__name__)
 
 try:
     from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+    from rest_framework_simplejwt.views import TokenObtainPairView
 except Exception:  # pragma: no cover - optional in some environments
     RefreshToken = None
     TokenError = Exception
+    TokenObtainPairView = None
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +97,15 @@ class StandardResultsSetPagination(PageNumberPagination):
 # ---------------------------------------------------------------------------
 # User Endpoints
 # ---------------------------------------------------------------------------
+
+if TokenObtainPairView is not None:
+
+    class HubTokenObtainPairView(TokenObtainPairView):
+        """Login with email or institutional ID (student / lecturer / alumni)."""
+
+        serializer_class = HubTokenObtainPairSerializer
+        throttle_classes = [AuthRateThrottle]
+
 
 class MeView(APIView):
     """
@@ -111,6 +129,15 @@ class MeView(APIView):
 
     def patch(self, request):
         """Update current user profile."""
+        if request.user.role == UserRole.STUDENT:
+            return Response(
+                error_response(
+                    detail="Student profiles are managed by campus administration and cannot be edited here.",
+                    code=ApiCode.PERMISSION_DENIED,
+                ),
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         serializer = UserDetailSerializer(
             request.user,
             data=request.data,
@@ -138,16 +165,7 @@ class StudentImportView(APIView):
 
     def get(self, request):
         """Download a blank import template (.xlsx)."""
-        from openpyxl import Workbook
-
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Students"
-        ws.append(["Email", "Full name", "Institutional ID", "Department", "Password"])
-        ws.append(["student@example.com", "Example Student", "NIM-001", "Information Technology", ""])
-        buf = io.BytesIO()
-        wb.save(buf)
-        buf.seek(0)
+        buf = build_student_import_workbook()
         resp = HttpResponse(
             buf.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -163,7 +181,6 @@ class StudentImportView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         raw = upload.read()
-        default_password = (request.data.get("default_password") or "").strip()
 
         rows, parse_errors = parse_student_import_xlsx(raw)
         if not rows:
@@ -182,29 +199,21 @@ class StudentImportView(APIView):
         skipped = 0
 
         for r in rows:
-            pwd = r["password"] or default_password or None
-            if not pwd:
-                row_errors.append(
-                    {
-                        "row": r["row"],
-                        "email": r["email"],
-                        "message": "No password in row and default_password was not provided.",
-                    }
-                )
-                skipped += 1
-                continue
-            try:
-                validate_password(pwd)
-            except DjangoValidationError as exc:
-                row_errors.append(
-                    {
-                        "row": r["row"],
-                        "email": r["email"],
-                        "message": "; ".join(exc.messages),
-                    }
-                )
-                skipped += 1
-                continue
+            inst = r["institutional_id"]
+            pwd = r["password"] or inst
+            if r["password"]:
+                try:
+                    validate_password(pwd)
+                except DjangoValidationError as exc:
+                    row_errors.append(
+                        {
+                            "row": r["row"],
+                            "email": r["email"],
+                            "message": "; ".join(exc.messages),
+                        }
+                    )
+                    skipped += 1
+                    continue
 
             if CustomUser.objects.filter(email__iexact=r["email"]).exists():
                 row_errors.append(
@@ -217,30 +226,28 @@ class StudentImportView(APIView):
                 skipped += 1
                 continue
 
-            inst = r["institutional_id"]
-            if inst:
-                inst = inst.strip()
-                if CustomUser.objects.filter(institutional_id__iexact=inst).exists():
-                    row_errors.append(
-                        {
-                            "row": r["row"],
-                            "email": r["email"],
-                            "message": f"Institutional ID already in use: {inst}",
-                        }
-                    )
-                    skipped += 1
-                    continue
-            else:
-                inst = None
+            if CustomUser.objects.filter(institutional_id__iexact=inst).exists():
+                row_errors.append(
+                    {
+                        "row": r["row"],
+                        "email": r["email"],
+                        "message": f"Institutional ID already in use: {inst}",
+                    }
+                )
+                skipped += 1
+                continue
 
             try:
                 CustomUser.objects.create_user(
                     email=r["email"],
                     password=pwd,
-                    role=UserRole.STUDENT,
+                    role=r["role"],
                     full_name=r["full_name"],
                     department=r["department"] or "",
                     institutional_id=inst,
+                    place_of_birth=r.get("place_of_birth") or "",
+                    date_of_birth=r.get("date_of_birth"),
+                    alumni_year=r.get("alumni_year"),
                 )
                 created += 1
             except Exception as exc:
@@ -258,6 +265,88 @@ class StudentImportView(APIView):
                     "errors": row_errors,
                 },
                 detail=f"Import finished: {created} created, {skipped} skipped.",
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+
+class StudentPhotoBulkImportView(APIView):
+    """Bulk-assign profile photos from a .zip named by institutional ID. Admin only.
+
+    Each image in the archive must be named after the student's institutional ID
+    (NIM), e.g. ``2021001234.jpg``. Photos are matched to accounts by institutional
+    ID and stored as the user's profile photo used on the digital card.
+    """
+
+    permission_classes = [IsAdmin]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                error_response(detail='Missing file field "file".', code=ApiCode.VALIDATION_ERROR),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw = upload.read()
+        entries, parse_errors = extract_photo_entries(raw)
+        if not entries:
+            detail = (
+                "; ".join(parse_errors)
+                if parse_errors
+                else "No usable images found. Name each file after the student's institutional ID."
+            )
+            return Response(
+                error_response(detail=detail, code=ApiCode.VALIDATION_ERROR),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        row_errors: list[dict] = [{"message": m} for m in parse_errors]
+        updated = 0
+        skipped = 0
+
+        for entry in entries:
+            stem = entry["stem"]
+            user = CustomUser.objects.filter(institutional_id__iexact=stem).first()
+            if user is None:
+                row_errors.append(
+                    {
+                        "file": entry["filename"],
+                        "message": f"No account found with institutional ID {stem}.",
+                    }
+                )
+                skipped += 1
+                continue
+
+            try:
+                normalized = normalize_avatar(entry["data"])
+            except Exception:
+                row_errors.append(
+                    {
+                        "file": entry["filename"],
+                        "message": "Could not read the image (it may be corrupt or unsupported).",
+                    }
+                )
+                skipped += 1
+                continue
+
+            try:
+                user.photo.save(f"{stem}.webp", ContentFile(normalized), save=True)
+                updated += 1
+            except Exception as exc:
+                logger.exception("student photo import failed for %s", stem)
+                row_errors.append({"file": entry["filename"], "message": str(exc)})
+                skipped += 1
+
+        return Response(
+            success_response(
+                data={
+                    "updated": updated,
+                    "skipped": skipped,
+                    "errors": row_errors,
+                },
+                detail=f"Photo import finished: {updated} updated, {skipped} skipped.",
             ),
             status=status.HTTP_200_OK,
         )
@@ -374,6 +463,108 @@ class ChangePasswordView(APIView):
 
         return Response(
             success_response(detail="Password changed successfully."),
+            status=status.HTTP_200_OK,
+        )
+
+
+class RequestEmailVerificationView(APIView):
+    """Send a verification code to the authenticated user's current email."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AuthPublicRateThrottle]
+
+    def post(self, request):
+        user = request.user
+        if user.email_verified:
+            return Response(
+                error_response(
+                    detail="Your email address is already verified.",
+                    code=ApiCode.EMAIL_ALREADY_VERIFIED,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            create_and_send_verification_code(user)
+        except Exception:
+            logger.exception("Failed to send email verification code to %s", user.email)
+            return Response(
+                error_response(
+                    detail="Could not send verification email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            success_response(
+                detail=f"A verification code has been sent to {user.email}.",
+                code=ApiCode.EMAIL_SENT,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+
+class RequestEmailChangeView(APIView):
+    """Send a verification code to a new email address (applied after verification)."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AuthPublicRateThrottle]
+
+    def post(self, request):
+        serializer = RequestEmailChangeSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        new_email = serializer.validated_data["new_email"]
+
+        try:
+            create_and_send_verification_code(request.user, pending_email=new_email)
+        except Exception:
+            logger.exception("Failed to send email change verification to %s", new_email)
+            return Response(
+                error_response(
+                    detail="Could not send verification email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            success_response(
+                detail=f"A verification code has been sent to {new_email}. Enter the code to confirm the change.",
+                code=ApiCode.EMAIL_SENT,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+
+class VerifyEmailView(APIView):
+    """Verify a 6-digit code for the current email or a pending email change."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AuthPublicRateThrottle]
+
+    def post(self, request):
+        serializer = VerifyEmailCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        code = serializer.validated_data["code"]
+
+        user = EmailVerificationCode.verify_code_for_user(request.user, code)
+        if not user:
+            return Response(
+                error_response(
+                    detail="Invalid or expired verification code.",
+                    code=ApiCode.VALIDATION_ERROR,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        response_serializer = UserDetailSerializer(user, context={"request": request})
+        return Response(
+            success_response(
+                data=response_serializer.data,
+                detail="Email verified successfully.",
+                code=ApiCode.SUCCESS,
+            ),
             status=status.HTTP_200_OK,
         )
 

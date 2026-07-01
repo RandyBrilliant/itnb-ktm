@@ -22,6 +22,15 @@ const clearStoredTokens = () => {
   localStorage.removeItem("refresh_token")
 }
 
+const extractTokenRefreshPayload = (
+  payload: { access?: string; refresh?: string } | { data?: { access?: string; refresh?: string } }
+): { access?: string; refresh?: string } => {
+  if ("data" in payload && payload.data) {
+    return payload.data
+  }
+  return payload as { access?: string; refresh?: string }
+}
+
 // ---------------------------------------------------------------------------
 // Automatic token refresh interceptor
 // ---------------------------------------------------------------------------
@@ -79,20 +88,19 @@ api.interceptors.response.use(
         }
 
         const { data } = await axios.post<
-          { access: string } | { data?: { access?: string } }
+          { access: string; refresh?: string } | { data?: { access?: string; refresh?: string } }
         >(`${env.VITE_API_URL}/api/auth/token/refresh/`, {
           refresh: refreshToken,
         })
-        const newAccessToken =
-          "data" in data
-            ? data.data?.access
-            : "access" in data
-              ? data.access
-              : undefined
+        const tokenData = extractTokenRefreshPayload(data)
+        const newAccessToken = tokenData.access
         if (!newAccessToken) {
           throw new Error("Invalid refresh response")
         }
         localStorage.setItem("access_token", newAccessToken)
+        if (tokenData.refresh) {
+          localStorage.setItem("refresh_token", tokenData.refresh)
+        }
 
         processQueue(null)
         return api(originalRequest)

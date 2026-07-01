@@ -25,12 +25,16 @@ export interface User {
   role_display?: string
   photo?: string
   department?: string
+  place_of_birth?: string
+  date_of_birth?: string | null
   alumni_year?: number
   email_verified: boolean
+  pending_email_change?: string | null
   is_active: boolean
   is_staff?: boolean
   is_superuser?: boolean
   last_login?: string | null
+  joined_date?: string
   date_joined?: string
   created_at?: string
   updated_at?: string

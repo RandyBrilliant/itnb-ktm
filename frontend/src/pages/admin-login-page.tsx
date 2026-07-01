@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/lib/toast"
@@ -12,6 +12,13 @@ export function AdminLoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const emailRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (error && !password) {
+      emailRef.current?.focus()
+    }
+  }, [error, password])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -26,6 +33,7 @@ export function AdminLoginPage() {
       const user = await login(email, password, { redirect: false })
       if (user.role !== "ADMIN") {
         toast.info("Public portal required", "Please sign in from /login.")
+        setPassword("")
         setError("This portal is only for admin accounts.")
         await logout({ redirectTo: "/login", callApi: false })
         return
@@ -34,6 +42,7 @@ export function AdminLoginPage() {
       navigate("/admin/dashboard", { replace: true })
     } catch (err: unknown) {
       const errorMessage = getUserFriendlyError(err, "admin-login")
+      setPassword("")
       setError(errorMessage)
       toast.error("Login failed", errorMessage)
     }
@@ -118,6 +127,7 @@ export function AdminLoginPage() {
                     mail
                   </span>
                   <input
+                    ref={emailRef}
                     id="admin-email"
                     type="email"
                     autoComplete="username"

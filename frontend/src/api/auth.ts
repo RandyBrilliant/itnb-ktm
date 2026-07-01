@@ -3,6 +3,7 @@ import type { User } from "@/types/auth"
 import type { ApiSuccessResponse, LoginResponseData } from "@/types/api"
 
 export interface LoginCredentials {
+  /** Email or institutional ID (NIM/NIP) for student, lecturer, and alumni */
   email: string
   password: string
 }
@@ -73,21 +74,27 @@ export async function refreshToken(): Promise<string> {
   }
 
   const { data } = await api.post<
-    ApiSuccessResponse<{ access: string }> | { access: string }
+    ApiSuccessResponse<{ access: string; refresh?: string }> | { access: string; refresh?: string }
   >("/api/auth/token/refresh/", { refresh })
 
-  const access =
-    "data" in data
-      ? data.data?.access
+  const tokenData =
+    "data" in data && data.data
+      ? data.data
       : "access" in data
-        ? data.access
+        ? data
         : undefined
+
+  const access = tokenData?.access
+  const rotatedRefresh = tokenData?.refresh
 
   if (!access) {
     throw new Error("Failed to refresh token")
   }
 
   localStorage.setItem("access_token", access)
+  if (rotatedRefresh) {
+    localStorage.setItem("refresh_token", rotatedRefresh)
+  }
   return access
 }
 
@@ -176,5 +183,23 @@ export async function updateMe(payload: UpdateMePayload): Promise<User> {
 
   const { data } = await api.patch<ApiSuccessResponse<User>>("/api/auth/me/", body)
   if (!data.data) throw new Error("Failed to update profile")
+  return data.data
+}
+
+export async function requestEmailVerification(): Promise<string> {
+  const { data } = await api.post<ApiSuccessResponse<null>>("/api/auth/request-email-verification/")
+  return data.detail ?? "Verification code sent."
+}
+
+export async function requestEmailChange(newEmail: string): Promise<string> {
+  const { data } = await api.post<ApiSuccessResponse<null>>("/api/auth/request-email-change/", {
+    new_email: newEmail,
+  })
+  return data.detail ?? "Verification code sent."
+}
+
+export async function verifyEmailCode(code: string): Promise<User> {
+  const { data } = await api.post<ApiSuccessResponse<User>>("/api/auth/verify-email/", { code })
+  if (!data.data) throw new Error("Failed to verify email")
   return data.data
 }

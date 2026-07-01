@@ -2,9 +2,7 @@ import { useState } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
 import { Edit2, Plus, Search, Check, X } from "lucide-react"
 import { useUsersQuery } from "@/hooks/use-users-query"
-import { activateUser, deactivateUser } from "@/api/users"
-import { toast } from "@/lib/toast"
-import { getUserFriendlyError } from "@/lib/error-message"
+import { ActiveStatusBadge } from "@/components/admin/active-status-badge"
 import {
   DIRECTORY_ROLE_LABELS,
   directoryRoleToSegment,
@@ -24,27 +22,12 @@ export function AdminRoleUsersListPage() {
   const labels = DIRECTORY_ROLE_LABELS[role]
   const pathSegment = directoryRoleToSegment(role)
 
-  const { data: usersData, isLoading, refetch } = useUsersQuery({
+  const { data: usersData, isLoading } = useUsersQuery({
     search: search || undefined,
     role,
     page,
     page_size: 20,
   })
-
-  const handleStatusToggle = async (userId: number, isActive: boolean) => {
-    try {
-      if (isActive) {
-        await deactivateUser(userId)
-        toast.success("Record deactivated")
-      } else {
-        await activateUser(userId)
-        toast.success("Record activated")
-      }
-      refetch()
-    } catch (error) {
-      toast.error("Could not update status", getUserFriendlyError(error, "user-status"))
-    }
-  }
 
   return (
     <div className="space-y-8">
@@ -111,27 +94,7 @@ export function AdminRoleUsersListPage() {
                       <td className="px-6 py-4 text-sm text-[#1a1c1c]">{user.department || "—"}</td>
                     ) : null}
                     <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => handleStatusToggle(user.id, user.is_active)}
-                        className={`inline-flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-medium transition-colors ${
-                          user.is_active
-                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-[#ececec] text-[#5f5e5e] hover:bg-[#e2e2e2]"
-                        }`}
-                      >
-                        {user.is_active ? (
-                          <>
-                            <Check size={16} />
-                            Active
-                          </>
-                        ) : (
-                          <>
-                            <X size={16} />
-                            Inactive
-                          </>
-                        )}
-                      </button>
+                      <ActiveStatusBadge isActive={user.is_active} />
                     </td>
                     <td className="px-6 py-4 text-center">
                       {user.email_verified ? (

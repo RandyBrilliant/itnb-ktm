@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { createUser } from "@/api/users"
+import { StudentDepartmentSelect } from "@/components/form/student-department-select"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
@@ -142,12 +143,7 @@ export function AdminStudentRecordCreatePage() {
 
           <label className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Department</span>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
-            />
+            <StudentDepartmentSelect value={department} onChange={setDepartment} />
           </label>
 
           <label className="space-y-1">

@@ -2,7 +2,6 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { listPosts } from "@/api/posts"
-import { COVER_IMAGE_SPEC } from "@/lib/media-guidelines"
 import type { UserRole } from "@/types/auth"
 import { getRoleBasePath } from "@/lib/role-path"
 import { resolveMediaUrl } from "@/lib/media-url"
@@ -32,14 +31,6 @@ export function NewsPage({ role }: { role: UserRole }) {
       maxWidthClassName="max-w-3xl"
     >
       <section className="space-y-6">
-        <div className="rounded-2xl border border-[#ececec] bg-gradient-to-br from-white to-[#fafafa] px-5 py-4 shadow-[0_1px_0_rgba(175,15,36,0.06)]">
-          <p className="text-sm leading-relaxed text-[#5f5e5e]">
-            Official updates from IT&amp;B. Cover images are published in{" "}
-            <span className="font-semibold text-[#1a1c1c]">{COVER_IMAGE_SPEC.aspectRatio}</span> format for a
-            consistent reading experience across devices.
-          </p>
-        </div>
-
         {isLoading ? (
           <div className="space-y-4">
             <div className="aspect-video animate-pulse rounded-2xl bg-[#ececec]" />

@@ -1,9 +1,13 @@
+import { Link } from "react-router-dom"
 import type { UserRole } from "@/types/auth"
 import { useRoleDashboard } from "@/hooks/use-role-dashboard"
 import { RoleShell } from "@/components/navigation/role-shell"
 import { AnimatedPage } from "@/components/animation/animated-page"
 import { motion } from "framer-motion"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { getRoleBasePath } from "@/lib/role-path"
+import { formatAcademicYearSubtitle } from "@/lib/academic-year"
+import type { PostItem } from "@/api/posts"
 
 const ROLE_TITLE: Record<UserRole, string> = {
   STUDENT: "Dashboard",
@@ -13,8 +17,34 @@ const ROLE_TITLE: Record<UserRole, string> = {
   ALUMNI: "Alumni",
 }
 
+function formatAnnouncementDate(value?: string) {
+  if (!value) return "Recently"
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+function announcementExcerpt(body: string, max = 100) {
+  const plain = body.replace(/<[^>]+>/g, "").trim()
+  if (!plain) return ""
+  return plain.length > max ? `${plain.slice(0, max)}…` : plain
+}
+
+function sortLatestPosts(posts: PostItem[]) {
+  return [...posts]
+    .filter((post) => post.is_published)
+    .sort((a, b) => {
+      const aTime = new Date(a.published_at || a.created_at || 0).getTime()
+      const bTime = new Date(b.published_at || b.created_at || 0).getTime()
+      return bTime - aTime
+    })
+}
+
 export function RoleDashboard({ role }: { role: UserRole }) {
-  const { isBootLoading, isDataLoading, me, events, stats } = useRoleDashboard(role)
+  const { isBootLoading, isDataLoading, me, posts, stats } = useRoleDashboard(role)
+  const basePath = getRoleBasePath(role)
 
   if (isBootLoading) {
     return (
@@ -26,13 +56,13 @@ export function RoleDashboard({ role }: { role: UserRole }) {
   }
 
   const photo = resolveMediaUrl(me?.photo) || undefined
-  const upcoming = events.slice(0, 2)
+  const latestAnnouncements = sortLatestPosts(posts).slice(0, 3)
+  const academicYearLabel = formatAcademicYearSubtitle(me?.institutional_id)
 
   return (
     <RoleShell
       role={role}
       title={`${ROLE_TITLE[role]}`}
-      subtitle="Academic Year 2023/24"
       avatarUrl={photo}
     >
       <AnimatedPage className="mx-auto max-w-md text-[#1a1c1c] lg:max-w-4xl">
@@ -40,9 +70,11 @@ export function RoleDashboard({ role }: { role: UserRole }) {
           <div className="flex">
             <div className="mr-4 h-16 w-2 bg-[#af0f24]" />
             <div>
-              <p className="text-xs font-bold tracking-[0.2em] text-[#af0f24]">
-                ACADEMIC YEAR 2023/24
-              </p>
+              {academicYearLabel ? (
+                <p className="text-xs font-bold tracking-[0.2em] text-[#af0f24]">
+                  {academicYearLabel.toUpperCase()}
+                </p>
+              ) : null}
               <h1 className="text-4xl font-extrabold tracking-tight">{ROLE_TITLE[role]}</h1>
             </div>
           </div>
@@ -89,47 +121,64 @@ export function RoleDashboard({ role }: { role: UserRole }) {
         </section>
 
         <section className="mb-8">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="h-6 w-1 bg-[#af0f24]" />
-              <h2 className="text-sm font-black uppercase tracking-tight">
-                Today's Schedule
-              </h2>
+              <h2 className="text-sm font-black uppercase tracking-tight">Latest Announcements</h2>
             </div>
-            <span className="text-[10px] font-bold text-[#af0f24]">VIEW FULL CALENDAR</span>
+            <Link
+              to={`${basePath}/news`}
+              className="text-[10px] font-bold uppercase text-[#af0f24] hover:underline"
+            >
+              View all news
+            </Link>
           </div>
           <div className="space-y-3">
-            {upcoming.length === 0 ? (
-              <div className="bg-[#f3f3f3] p-4 text-sm text-[#5f5e5e]">No events scheduled.</div>
+            {isDataLoading ? (
+              <div className="rounded-xl bg-[#f3f3f3] p-4 text-sm text-[#5f5e5e]">Loading announcements…</div>
+            ) : latestAnnouncements.length === 0 ? (
+              <div className="rounded-xl bg-[#f3f3f3] p-4 text-sm text-[#5f5e5e]">
+                No announcements yet. Check back soon for campus updates.
+              </div>
             ) : (
-              upcoming.map((event) => {
-                const date = new Date(event.event_date)
-                const hour = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              latestAnnouncements.map((post) => {
+                const image = resolveMediaUrl(post.image) || post.image_url || ""
+                const excerpt = announcementExcerpt(post.body)
                 return (
                   <motion.div
-                    key={event.id}
-                    className="flex items-center gap-4 rounded-xl bg-[#f3f3f3] p-4"
+                    key={post.id}
+                    className="overflow-hidden rounded-xl border border-[#ececec] bg-white"
                     whileHover={{ x: 2 }}
                     transition={{ duration: 0.16 }}
                   >
-                    <div className="min-w-[56px] text-center">
-                      <p className="text-lg font-black leading-none">{hour.split(":")[0]}</p>
-                      <p className="text-[10px] font-bold uppercase text-[#5f5e5e]">
-                        {hour.includes("PM") ? "PM" : "AM"}
-                      </p>
-                    </div>
-                    <div className="h-8 w-px bg-[#e4beba]/40" />
-                    <div className="flex-1">
-                      <p className="text-xs font-bold uppercase tracking-tight text-[#af0f24]">
-                        {event.event_location || "Campus"}
-                      </p>
-                      <p className="text-sm font-bold">
-                        {event.post?.title || "Institution Event"}
-                      </p>
-                    </div>
-                    <span className="material-symbols-outlined text-[#af0f24]/40">
-                      arrow_forward_ios
-                    </span>
+                    <Link to={`${basePath}/news/${post.id}`} className="flex gap-4 p-4">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#f0f0f0]">
+                        {image ? (
+                          <img src={image} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#af0f24]">
+                            <span className="material-symbols-outlined text-2xl">campaign</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#af0f24]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#af0f24]">
+                            {post.category_display || post.category}
+                          </span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8a8a8a]">
+                            {formatAnnouncementDate(post.published_at || post.created_at)}
+                          </span>
+                        </div>
+                        <p className="mt-1 truncate text-sm font-bold text-[#1a1c1c]">{post.title}</p>
+                        {excerpt ? (
+                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#5f5e5e]">{excerpt}</p>
+                        ) : null}
+                      </div>
+                      <span className="material-symbols-outlined shrink-0 self-center text-[#af0f24]/40">
+                        arrow_forward_ios
+                      </span>
+                    </Link>
                   </motion.div>
                 )
               })

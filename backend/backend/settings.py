@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     # Local apps
     'account.apps.AccountConfig',
     'main.apps.MainConfig',
+    'academic.apps.AcademicConfig',
 ]
 
 AUTH_USER_MODEL = 'account.CustomUser'
@@ -132,8 +133,17 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    },
 }
+
+# External myitnb MariaDB (read-only via PyMySQL in academic app; not Django DATABASES)
+MYITNB_DB_HOST = get_env('MYITNB_DB_HOST', '')
+MYITNB_DB_PORT = get_env('MYITNB_DB_PORT', '3306')
+MYITNB_DB_NAME = get_env('MYITNB_DB_NAME', 'myitnb')
+MYITNB_DB_USER = get_env('MYITNB_DB_USER', '')
+MYITNB_DB_PASSWORD = get_env('MYITNB_DB_PASSWORD', '')
+# Comma-separated curriculum record IDs for score-list query (legacy: 1,23,55)
+MYITNB_CURRICULUM_IDS = get_env('MYITNB_CURRICULUM_IDS', '1,23,55')
 
 
 # Password validation
@@ -227,6 +237,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
+        'auth': '10/min',
+        'auth_public': '5/min',
     },
     'EXCEPTION_HANDLER': 'account.exceptions.custom_exception_handler',
 }
@@ -238,7 +250,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,

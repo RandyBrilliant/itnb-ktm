@@ -9,6 +9,7 @@ import { getRoleBasePath } from "@/lib/role-path"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
+import { StudentReadOnlyProfile } from "@/components/profile/student-read-only-profile"
 import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
 import { toast } from "@/lib/toast"
 import { authKeys } from "@/hooks/use-auth-query"
@@ -24,6 +25,20 @@ export function ProfilePage({ role }: { role: UserRole }) {
   const [saving, setSaving] = useState(false)
   const basePath = getRoleBasePath(role)
   const isAdminView = role === "ADMIN"
+  const isStudentView = role === "STUDENT"
+
+  if (isStudentView) {
+    return (
+      <RoleContentLayout
+        role={role}
+        title="My Profile"
+        subtitle="View your account information"
+        maxWidthClassName="w-full"
+      >
+        <StudentReadOnlyProfile user={user} changePasswordHref={`${basePath}/change-password`} />
+      </RoleContentLayout>
+    )
+  }
 
   useEffect(() => {
     setFullName(user?.full_name || "")

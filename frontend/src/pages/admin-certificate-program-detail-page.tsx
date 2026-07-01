@@ -11,6 +11,7 @@ import {
 } from "@/api/certificates"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { toast } from "@/lib/toast"
+import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
 import { PaginationControls } from "@/components/content/pagination-controls"
 
 export function AdminCertificateProgramDetailPage() {
@@ -21,6 +22,7 @@ export function AdminCertificateProgramDetailPage() {
   const [displayName, setDisplayName] = useState("")
   const [idRaw, setIdRaw] = useState("")
   const [viewingId, setViewingId] = useState<number | null>(null)
+  const [pendingSuspend, setPendingSuspend] = useState<CertificateItem | null>(null)
 
   const { data: program, isLoading: programLoading } = useQuery({
     queryKey: ["certificate-program", id],
@@ -54,6 +56,7 @@ export function AdminCertificateProgramDetailPage() {
     mutationFn: suspendCertificate,
     onSuccess: () => {
       toast.success("Certificate hidden", "It will not appear in the student’s portal list.")
+      setPendingSuspend(null)
       invalidate()
     },
     onError: (e) => toast.error("Action failed", getUserFriendlyError(e, "generic")),
@@ -229,7 +232,7 @@ export function AdminCertificateProgramDetailPage() {
                             <button
                               type="button"
                               disabled={suspendMut.isPending}
-                              onClick={() => suspendMut.mutate(c.id)}
+                              onClick={() => setPendingSuspend(c)}
                               className="rounded-lg border border-[#e8bcbc] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[#af0f24] hover:bg-red-50 disabled:opacity-50"
                             >
                               Suspend
@@ -246,6 +249,23 @@ export function AdminCertificateProgramDetailPage() {
           </>
         )}
       </section>
+      <ConfirmActionModal
+        open={pendingSuspend !== null}
+        isLoading={suspendMut.isPending}
+        title="Suspend certificate"
+        description={
+          pendingSuspend
+            ? `Hide the certificate for ${pendingSuspend.recipient_name || pendingSuspend.user?.full_name || "this recipient"}? It will no longer appear in their portal.`
+            : ""
+        }
+        confirmLabel="Suspend"
+        onCancel={() => {
+          if (!suspendMut.isPending) setPendingSuspend(null)
+        }}
+        onConfirm={() => {
+          if (pendingSuspend) suspendMut.mutate(pendingSuspend.id)
+        }}
+      />
     </div>
   )
 }

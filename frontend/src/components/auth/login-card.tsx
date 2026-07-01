@@ -1,16 +1,13 @@
 import type { FormEvent } from "react"
-import { useState } from "react"
-import { ThemedCheckbox } from "../ui/themed-checkbox"
+import { useEffect, useRef, useState } from "react"
 
 interface LoginCardProps {
   identifier: string
   password: string
-  rememberMe: boolean
   isLoading: boolean
   error?: string
   onIdentifierChange: (value: string) => void
   onPasswordChange: (value: string) => void
-  onRememberChange: (value: boolean) => void
   onSubmit: (e: FormEvent) => void
   onForgotPassword: () => void
 }
@@ -18,32 +15,37 @@ interface LoginCardProps {
 export function LoginCard({
   identifier,
   password,
-  rememberMe,
   isLoading,
   error,
   onIdentifierChange,
   onPasswordChange,
-  onRememberChange,
   onSubmit,
   onForgotPassword,
 }: LoginCardProps) {
   const [showPassword, setShowPassword] = useState(false)
+  const identifierRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (error && !password) {
+      identifierRef.current?.focus()
+    }
+  }, [error, password])
 
   return (
     <section className="relative w-full max-w-md border border-white/40 bg-white/80 p-6 backdrop-blur-2xl sm:p-10">
       <div className="absolute inset-y-0 left-0 w-1.5 bg-[#af0f24]" />
 
-      <div className="mb-8 pl-2 sm:mb-10">
+      <div className="mb-8 flex flex-col items-center pl-2 text-center sm:mb-10">
         <img
-          src="/img/logo-single.png"
-          alt="IT&B crest logo"
-          className="mb-4 h-14 w-14 object-contain"
+          src="/img/logo-full.png"
+          alt="IT&B"
+          className="h-auto w-full max-w-[220px] object-contain"
         />
-        <h2 className="font-[var(--font-heading)] text-3xl font-black uppercase tracking-tight text-[#1a1c1c]">
-          IT&B HUB
-        </h2>
+        <p className="mt-4 text-xs font-bold uppercase tracking-[0.16em] text-[#af0f24]">
+          Student Portal
+        </p>
         <p className="mt-2 font-[var(--font-body)] text-xs font-semibold tracking-[0.12em] text-[#5f5e5e] sm:text-sm">
-          LOGIN TO YOUR ACCOUNT TO CONTINUE
+          Sign in to continue
         </p>
       </div>
 
@@ -60,20 +62,21 @@ export function LoginCard({
               htmlFor="identifier"
               className="mb-2 block font-[var(--font-body)] text-xs font-bold uppercase tracking-[0.12em] text-[#af0f24] sm:text-sm"
             >
-              Student ID/ Staff ID/ Email
+              Student ID / Email
             </label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-[#5f5e5e]">
                 badge
               </span>
               <input
+                ref={identifierRef}
                 id="identifier"
                 type="text"
                 autoComplete="username"
                 value={identifier}
                 onChange={(e) => onIdentifierChange(e.target.value)}
                 disabled={isLoading}
-                placeholder="Enter your Student ID, Staff ID, or Email"
+                placeholder="NIM, NIP, or email address"
                 className="w-full border-0 border-b border-[#e4beba] bg-transparent pb-2 pl-8 font-[var(--font-body)] text-base text-[#1a1c1c] outline-none placeholder:text-[#8f6f6c] focus:border-[#af0f24] disabled:cursor-not-allowed disabled:opacity-60 sm:text-lg"
               />
             </div>
@@ -114,13 +117,7 @@ export function LoginCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <ThemedCheckbox
-            checked={rememberMe}
-            onChange={(e) => onRememberChange(e.target.checked)}
-            label="Keep me logged in"
-          />
-
+        <div className="flex justify-end">
           <button
             type="button"
             className="font-[var(--font-body)] text-sm font-semibold text-[#5f5e5e] transition-colors hover:text-[#af0f24]"

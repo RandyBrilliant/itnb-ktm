@@ -35,6 +35,8 @@ export type AdminUpdateUserPayload = {
   can_manage_benefits?: boolean
   contact_phone?: string
   address?: string
+  place_of_birth?: string
+  date_of_birth?: string | null
   photoFile?: File | null
   photoRemoved?: boolean
 }
@@ -53,6 +55,10 @@ function appendAdminUserFormFields(fd: FormData, payload: Omit<AdminUpdateUserPa
   }
   if (payload.contact_phone !== undefined) fd.append("contact_phone", payload.contact_phone)
   if (payload.address !== undefined) fd.append("address", payload.address)
+  if (payload.place_of_birth !== undefined) fd.append("place_of_birth", payload.place_of_birth)
+  if (payload.date_of_birth !== undefined) {
+    fd.append("date_of_birth", payload.date_of_birth ?? "")
+  }
 }
 
 export interface UserFilters {
@@ -167,18 +173,32 @@ export async function downloadStudentImportTemplate(): Promise<Blob> {
 /**
  * POST /api/users/import-students/ — bulk-create student accounts from .xlsx.
  */
-export async function importStudentsFromExcel(
-  file: File,
-  defaultPassword?: string
-): Promise<StudentImportResult> {
+export async function importStudentsFromExcel(file: File): Promise<StudentImportResult> {
   const formData = new FormData()
   formData.append("file", file)
-  if (defaultPassword?.trim()) {
-    formData.append("default_password", defaultPassword.trim())
-  }
   const { data } = await api.post<ApiSuccessResponse<StudentImportResult> | StudentImportResult>(
     "/api/users/import-students/",
     formData
   )
   return unwrapApiData(data, "Import failed")
+}
+
+export interface StudentPhotoImportResult {
+  updated: number
+  skipped: number
+  errors: Array<{ file?: string; message: string }>
+}
+
+/**
+ * POST /api/users/import-student-photos/ — bulk-assign avatars from a .zip
+ * whose files are named by institutional ID (e.g. 2021001234.jpg).
+ */
+export async function importStudentPhotosFromZip(file: File): Promise<StudentPhotoImportResult> {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await api.post<ApiSuccessResponse<StudentPhotoImportResult> | StudentPhotoImportResult>(
+    "/api/users/import-student-photos/",
+    formData
+  )
+  return unwrapApiData(data, "Photo import failed")
 }

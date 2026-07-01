@@ -50,7 +50,7 @@ export function AdminDashboardPage() {
             Welcome back, {greeting.split(" ")[0]}.
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-[#5f5e5e]">
-            Live counts from your hub: student accounts, campus news, benefits, and certificate programs.
+            Real-time overview of student records, campus news, active benefits, and certificate programs.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">

@@ -1,6 +1,18 @@
 import { env } from "@/lib/env"
 
 /**
+ * Paths served from the Vite public folder (e.g. /img/...) — keep on the frontend origin.
+ */
+export function resolvePublicAssetUrl(url: string | undefined | null): string {
+  if (url == null) return ""
+  const trimmed = String(url).trim()
+  if (!trimmed) return ""
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (trimmed.startsWith("/")) return trimmed
+  return `/${trimmed}`
+}
+
+/**
  * Turn API-relative media paths into absolute URLs the browser can load.
  * Django/DRF often returns `/media/...` which must not be resolved against the frontend origin.
  */

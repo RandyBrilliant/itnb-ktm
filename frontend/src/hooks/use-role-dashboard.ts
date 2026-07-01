@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useMeQuery } from "@/hooks/use-auth-query"
+import { formatGpa, useMyAcademicQuery } from "@/hooks/use-academic-query"
 import { getMyCard } from "@/api/cards"
 import { listCertificates } from "@/api/certificates"
 import { listEvents } from "@/api/events"
@@ -10,6 +11,10 @@ import type { UserRole } from "@/types/auth"
 
 export function useRoleDashboard(role: UserRole) {
   const meQuery = useMeQuery()
+  const isStudent = role === "STUDENT"
+  const needsBenefits = role === "STAFF" || role === "ALUMNI"
+
+  const academicQuery = useMyAcademicQuery({ enabled: isStudent })
   const cardQuery = useQuery({
     queryKey: ["dashboard", role, "card"],
     queryFn: getMyCard,
@@ -27,13 +32,19 @@ export function useRoleDashboard(role: UserRole) {
   })
   const postQuery = useQuery({
     queryKey: ["dashboard", role, "posts"],
-    queryFn: () => listPosts(),
+    queryFn: () =>
+      listPosts({
+        page_size: 5,
+        is_published: true,
+        ordering: "-published_at",
+      }),
     retry: false,
   })
   const benefitQuery = useQuery({
     queryKey: ["dashboard", role, "benefits"],
     queryFn: () => listBenefits(1),
     retry: false,
+    enabled: needsBenefits,
   })
 
   const summary = useMemo(() => {
@@ -42,6 +53,11 @@ export function useRoleDashboard(role: UserRole) {
     const events = eventQuery.data?.results ?? []
     const posts = postQuery.data?.results ?? []
     const benefits = benefitQuery.data?.results ?? []
+    const gpaSummary = academicQuery.data?.summary
+
+    const studentGpaHint = gpaSummary?.student_major
+      ? [gpaSummary.student_major, gpaSummary.student_year].filter(Boolean).join(" · ")
+      : "From academic records"
 
     const roleStats: Record<
       UserRole,
@@ -58,9 +74,9 @@ export function useRoleDashboard(role: UserRole) {
         leftLabel: "Active Certificates",
         leftValue: String(activeCertificates),
         leftHint: `${certificates.length} total records`,
-        rightLabel: "Available Perks",
-        rightValue: String(benefits.length),
-        rightHint: "Role-based eligibility",
+        rightLabel: "Current GPA",
+        rightValue: academicQuery.isLoading ? "..." : formatGpa(gpaSummary?.student_gpa),
+        rightHint: studentGpaHint,
       },
       STAFF: {
         leftLabel: "Certificates",
@@ -104,11 +120,15 @@ export function useRoleDashboard(role: UserRole) {
       certificatesCount: certificates.length,
       activeCertificates,
     }
-  }, [role, certQuery.data, eventQuery.data, postQuery.data, benefitQuery.data])
+  }, [role, certQuery.data, eventQuery.data, postQuery.data, benefitQuery.data, academicQuery.data, academicQuery.isLoading])
 
   const isBootLoading = meQuery.isLoading || cardQuery.isLoading
   const isDataLoading =
-    certQuery.isLoading || eventQuery.isLoading || postQuery.isLoading || benefitQuery.isLoading
+    certQuery.isLoading ||
+    eventQuery.isLoading ||
+    postQuery.isLoading ||
+    benefitQuery.isLoading ||
+    (isStudent && academicQuery.isLoading)
 
   return {
     isBootLoading,

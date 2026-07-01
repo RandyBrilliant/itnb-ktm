@@ -85,18 +85,30 @@ def generate_digital_card_image(user, card_type: str) -> Image.Image:
     valid_until = getattr(getattr(user, "digital_card", None), "valid_until", None)
     valid_until_text = valid_until.strftime("%B %Y") if valid_until else "-"
 
+    place = (getattr(user, "place_of_birth", None) or "").strip()
+    dob = getattr(user, "date_of_birth", None)
+    if place and dob:
+        birth_text = f"{place}, {dob.strftime('%d %B %Y')}"
+    elif place:
+        birth_text = place
+    elif dob:
+        birth_text = dob.strftime("%d %B %Y")
+    else:
+        birth_text = "-"
+
     content_x = 112
     _draw_field(draw, content_x, 400, "Name", name, label_font, name_font)
     _draw_field(draw, content_x, 470, "Student ID", card_number, label_font, value_font)
     _draw_field(draw, content_x, 535, "Major", department, label_font, value_font)
-    _draw_field(draw, content_x, 600, "Place, Date of Birth", "-", label_font, value_font)
+    _draw_field(draw, content_x, 600, "Place, Date of Birth", birth_text, label_font, value_font)
 
     draw.line((content_x, 680, 430, 680), fill="#21212133", width=1)
     draw.text((content_x, 700), "Bachelor Degree", fill=LABEL_COLOR, font=degree_font)
     draw.text((content_x, 752), "Valid Thru", fill=LABEL_COLOR, font=label_font)
     draw.text((content_x, 778), valid_until_text, fill=VALUE_COLOR, font=valid_font)
 
-    photo_field = (218, 132, 454, 368)
+    # 3:4 portrait slot (177×236), horizontally centered on the former square slot.
+    photo_field = (248, 132, 425, 368)
     if getattr(user, "photo", None):
         try:
             with Image.open(user.photo.path) as photo:

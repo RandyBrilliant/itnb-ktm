@@ -17,7 +17,7 @@ interface RoleContentLayoutProps {
 export function RoleContentLayout({
   role,
   title,
-  subtitle = "Academic Year 2023/24",
+  subtitle,
   maxWidthClassName = "max-w-2xl",
   children,
 }: RoleContentLayoutProps) {

@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createCertificateProgram } from "@/api/certificate-programs"
+import { DatePickerField } from "@/components/ui/date-picker-field"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -81,16 +82,12 @@ export function AdminCertificateProgramCreatePage() {
               placeholder="e.g. IT&B Annual Accounting Competition 2025"
             />
           </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Issued date</span>
-            <input
-              required
-              type="date"
-              className="w-full rounded-sm border border-[#ddd] px-3 py-2 text-sm"
-              value={issuedDate}
-              onChange={(e) => setIssuedDate(e.target.value)}
-            />
-          </label>
+          <DatePickerField
+            label="Issued date"
+            value={issuedDate}
+            onChange={setIssuedDate}
+            required
+          />
         </div>
 
         <label className="block space-y-1">
@@ -103,15 +100,13 @@ export function AdminCertificateProgramCreatePage() {
           />
         </label>
 
-        <label className="block space-y-1 md:max-w-xs">
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Valid until (optional)</span>
-          <input
-            type="date"
-            className="w-full rounded-sm border border-[#ddd] px-3 py-2 text-sm"
-            value={validUntil}
-            onChange={(e) => setValidUntil(e.target.value)}
-          />
-        </label>
+        <DatePickerField
+          label="Valid until (optional)"
+          value={validUntil}
+          onChange={setValidUntil}
+          placeholder="No expiry"
+          className="md:max-w-xs"
+        />
 
         <div className="grid gap-6 md:grid-cols-2">
           <label className="block space-y-1">

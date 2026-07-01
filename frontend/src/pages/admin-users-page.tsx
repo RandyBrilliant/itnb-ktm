@@ -2,14 +2,14 @@ import { useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { useUsersQuery } from "@/hooks/use-users-query"
 import {
-  activateUser,
-  deactivateUser,
   downloadStudentImportTemplate,
   importStudentsFromExcel,
+  importStudentPhotosFromZip,
 } from "@/api/users"
+import { ActiveStatusBadge } from "@/components/admin/active-status-badge"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
-import { Search, Check, X, Download, Upload, Pencil } from "lucide-react"
+import { Search, Check, X, Download, Upload, Pencil, Image as ImageIcon } from "lucide-react"
 
 /**
  * Admin users management page
@@ -22,9 +22,11 @@ export function AdminUsersPage() {
   const [recordRoleScope, setRecordRoleScope] = useState<RecordRoleScope>("both")
   const [page, setPage] = useState(1)
   const [importFile, setImportFile] = useState<File | null>(null)
-  const [defaultImportPassword, setDefaultImportPassword] = useState("")
   const [importing, setImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [photoZip, setPhotoZip] = useState<File | null>(null)
+  const [photoImporting, setPhotoImporting] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   const { data: usersData, isLoading, refetch } = useUsersQuery({
     search: search || undefined,
@@ -34,21 +36,6 @@ export function AdminUsersPage() {
     page,
     page_size: 20,
   })
-
-  const handleStatusToggle = async (userId: number, isActive: boolean) => {
-    try {
-      if (isActive) {
-        await deactivateUser(userId)
-        toast.success("User deactivated")
-      } else {
-        await activateUser(userId)
-        toast.success("User activated")
-      }
-      refetch()
-    } catch (error) {
-      toast.error("Failed to update user status", getUserFriendlyError(error, "user-status"))
-    }
-  }
 
   const handleDownloadTemplate = async () => {
     try {
@@ -72,10 +59,7 @@ export function AdminUsersPage() {
     }
     try {
       setImporting(true)
-      const result = await importStudentsFromExcel(
-        importFile,
-        defaultImportPassword.trim() || undefined
-      )
+      const result = await importStudentsFromExcel(importFile)
       const summary = `Created ${result.created}. Skipped ${result.skipped}.`
       toast.success("Import finished", summary)
       if (result.errors?.length) {
@@ -92,6 +76,32 @@ export function AdminUsersPage() {
       toast.error("Import failed", getUserFriendlyError(error, "generic"))
     } finally {
       setImporting(false)
+    }
+  }
+
+  const handlePhotoImport = async () => {
+    if (!photoZip) {
+      toast.warning("No file selected", "Choose a .zip of student photos first.")
+      return
+    }
+    try {
+      setPhotoImporting(true)
+      const result = await importStudentPhotosFromZip(photoZip)
+      toast.success("Photo import finished", `Updated ${result.updated}. Skipped ${result.skipped}.`)
+      if (result.errors?.length) {
+        const hint = result.errors
+          .slice(0, 6)
+          .map((e) => (e.file ? `${e.file}: ${e.message}` : e.message))
+          .join(" · ")
+        toast.warning("Photo notes", hint.length > 280 ? `${hint.slice(0, 280)}…` : hint)
+      }
+      setPhotoZip(null)
+      if (photoInputRef.current) photoInputRef.current.value = ""
+      await refetch()
+    } catch (error) {
+      toast.error("Photo import failed", getUserFriendlyError(error, "generic"))
+    } finally {
+      setPhotoImporting(false)
     }
   }
 
@@ -159,9 +169,12 @@ export function AdminUsersPage() {
             Import student records
           </p>
           <p className="mt-1 text-sm text-[#5f5e5e]">
-            Upload an Excel (.xlsx) file with columns Email and Full name (see template). Optional: Institutional ID,
-            Department, Password. If the Password column is empty, provide a default password below (must meet password
-            rules).
+            Upload an Excel (.xlsx) file using the template. Required: Email, Full name, and Institutional ID.
+            Optional: Department (Management, Information Systems, Accounting, International Trade,
+            Entrepreneurship, Master in Management, Hospitality Management), Place of birth, Date of birth
+            (YYYY-MM-DD), Record type (STUDENT or ALUMNI),
+            Graduation year, Password. If Password is empty, each account uses its Institutional ID as the initial
+            password.
           </p>
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <button
@@ -187,19 +200,6 @@ export function AdminUsersPage() {
               <Upload size={18} />
               {importFile ? importFile.name : "Choose file"}
             </button>
-            <label className="flex min-w-[200px] flex-1 flex-col gap-1">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">
-                Default password (optional)
-              </span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={defaultImportPassword}
-                onChange={(e) => setDefaultImportPassword(e.target.value)}
-                placeholder="If rows omit Password"
-                className="border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
-              />
-            </label>
             <button
               type="button"
               disabled={importing}
@@ -207,6 +207,42 @@ export function AdminUsersPage() {
               className="inline-flex items-center gap-2 bg-[#af0f24] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#930019] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {importing ? "Importing…" : "Import students"}
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-[#ececec] pt-4 md:col-span-3">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">
+            Import student photos
+          </p>
+          <p className="mt-1 text-sm text-[#5f5e5e]">
+            Upload a .zip of photos for digital ID cards. Name each image after the student&apos;s Institutional ID
+            (e.g. <span className="font-semibold">2021001234.jpg</span>). Accepted formats: JPG, PNG, WEBP. Images are
+            cropped to a square and compressed to WebP automatically.
+          </p>
+          <div className="mt-3 flex flex-wrap items-end gap-3">
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept=".zip,application/zip,application/x-zip-compressed"
+              className="hidden"
+              onChange={(e) => setPhotoZip(e.target.files?.[0] ?? null)}
+            />
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="inline-flex items-center gap-2 border border-[#d5d5d5] bg-white px-4 py-2 text-sm font-semibold text-[#1a1c1c] transition hover:bg-[#ececec]"
+            >
+              <ImageIcon size={18} />
+              {photoZip ? photoZip.name : "Choose .zip"}
+            </button>
+            <button
+              type="button"
+              disabled={photoImporting}
+              onClick={handlePhotoImport}
+              className="inline-flex items-center gap-2 bg-[#af0f24] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#930019] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {photoImporting ? "Uploading…" : "Import photos"}
             </button>
           </div>
         </div>
@@ -272,29 +308,7 @@ export function AdminUsersPage() {
                       {user.institutional_id || "—"}
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleStatusToggle(user.id, user.is_active)
-                        }
-                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                          user.is_active
-                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-[#ececec] text-[#5f5e5e] hover:bg-[#e2e2e2]"
-                        }`}
-                      >
-                        {user.is_active ? (
-                          <>
-                            <Check size={16} />
-                            Active
-                          </>
-                        ) : (
-                          <>
-                            <X size={16} />
-                            Inactive
-                          </>
-                        )}
-                      </button>
+                      <ActiveStatusBadge isActive={user.is_active} />
                     </td>
                     <td className="px-6 py-4 text-center">
                       {user.email_verified ? (

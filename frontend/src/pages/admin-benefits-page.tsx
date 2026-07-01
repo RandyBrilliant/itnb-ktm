@@ -8,6 +8,7 @@ import {
   listBenefitCategories,
   type Benefit,
 } from "@/api/benefits"
+import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -23,6 +24,7 @@ export function AdminBenefitsPage() {
   const [activeFilter, setActiveFilter] = useState<string>("")
   const [page, setPage] = useState(1)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Benefit | null>(null)
 
   const queryFilters = useMemo(
     () => ({
@@ -47,17 +49,17 @@ export function AdminBenefitsPage() {
     queryFn: () => listBenefitsAdmin(queryFilters),
   })
 
-  const handleDelete = async (benefit: Benefit) => {
-    const confirmed = window.confirm(`Delete "${benefit.title}"? This cannot be undone.`)
-    if (!confirmed) return
+  const handleDelete = async () => {
+    if (!pendingDelete) return
 
     try {
-      setDeletingId(benefit.id)
-      await deleteBenefit(benefit.id)
+      setDeletingId(pendingDelete.id)
+      await deleteBenefit(pendingDelete.id)
       toast.success("Benefit deleted")
       await queryClient.invalidateQueries({ queryKey: ["admin-benefits"] })
       await queryClient.invalidateQueries({ queryKey: ["benefit-categories"] })
       refetch()
+      setPendingDelete(null)
     } catch (error) {
       toast.error("Failed to delete benefit", getUserFriendlyError(error, "generic"))
     } finally {
@@ -196,7 +198,7 @@ export function AdminBenefitsPage() {
                         </Link>
                         <button
                           type="button"
-                          onClick={() => handleDelete(benefit)}
+                          onClick={() => setPendingDelete(benefit)}
                           disabled={deletingId === benefit.id}
                           className="inline-flex items-center gap-1 rounded-sm border border-[#f2b6b6] px-3 py-1.5 text-xs font-semibold text-[#af0f24] transition hover:bg-[#fff2f2] disabled:cursor-not-allowed disabled:opacity-70"
                         >
@@ -239,6 +241,21 @@ export function AdminBenefitsPage() {
           </div>
         </div>
       )}
+      <ConfirmActionModal
+        open={pendingDelete !== null}
+        isLoading={deletingId === pendingDelete?.id}
+        title="Delete benefit"
+        description={
+          pendingDelete
+            ? `Delete "${pendingDelete.title}"? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onCancel={() => {
+          if (deletingId === null) setPendingDelete(null)
+        }}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

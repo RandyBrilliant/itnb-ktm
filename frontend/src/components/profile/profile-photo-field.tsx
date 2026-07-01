@@ -27,9 +27,9 @@ export function ProfilePhotoField({
       onCoverRemoved={onPhotoRemoved}
       onValidationError={onValidationError}
       enableCrop
-      cropAspect={1}
+      cropAspect={3 / 4}
       showCoverGuidelines={false}
-      previewClassName="mx-auto h-36 w-36 rounded-full border border-[#e2e2e2] object-cover"
+      previewClassName="mx-auto aspect-[3/4] w-40 rounded-lg border border-[#e2e2e2] object-cover"
     />
   )
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Edit2, Plus, Search, Trash2 } from "lucide-react"
 import { deletePost, listPosts, type PostCategory, type PostItem } from "@/api/posts"
+import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -20,6 +21,7 @@ export function AdminPostsPage() {
   const [publishFilter, setPublishFilter] = useState<string>("")
   const [page, setPage] = useState(1)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<PostItem | null>(null)
 
   const queryFilters = useMemo(
     () => ({
@@ -39,16 +41,16 @@ export function AdminPostsPage() {
     queryFn: () => listPosts(queryFilters),
   })
 
-  const handleDelete = async (post: PostItem) => {
-    const confirmed = window.confirm(`Delete "${post.title}"? This action cannot be undone.`)
-    if (!confirmed) return
+  const handleDelete = async () => {
+    if (!pendingDelete) return
 
     try {
-      setDeletingId(post.id)
-      await deletePost(post.id)
+      setDeletingId(pendingDelete.id)
+      await deletePost(pendingDelete.id)
       toast.success("Post deleted")
       await queryClient.invalidateQueries({ queryKey: ["admin-posts"] })
       refetch()
+      setPendingDelete(null)
     } catch (error) {
       toast.error("Failed to delete post", getUserFriendlyError(error, "generic"))
     } finally {
@@ -169,7 +171,8 @@ export function AdminPostsPage() {
                           Edit
                         </Link>
                         <button
-                          onClick={() => handleDelete(post)}
+                          type="button"
+                          onClick={() => setPendingDelete(post)}
                           disabled={deletingId === post.id}
                           className="inline-flex items-center gap-1 rounded-sm border border-[#f2b6b6] px-3 py-1.5 text-xs font-semibold text-[#af0f24] transition hover:bg-[#fff2f2] disabled:cursor-not-allowed disabled:opacity-70"
                         >
@@ -209,6 +212,21 @@ export function AdminPostsPage() {
           </div>
         </div>
       )}
+      <ConfirmActionModal
+        open={pendingDelete !== null}
+        isLoading={deletingId === pendingDelete?.id}
+        title="Delete post"
+        description={
+          pendingDelete
+            ? `Delete "${pendingDelete.title}"? This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onCancel={() => {
+          if (deletingId === null) setPendingDelete(null)
+        }}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

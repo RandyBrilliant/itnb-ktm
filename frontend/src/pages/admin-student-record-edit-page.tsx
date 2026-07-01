@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getUser, updateUser } from "@/api/users"
 import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
 import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
+import { StudentDepartmentSelect } from "@/components/form/student-department-select"
+import { DatePickerField } from "@/components/ui/date-picker-field"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { toast } from "@/lib/toast"
@@ -23,6 +25,8 @@ export function AdminStudentRecordEditPage() {
   const [fullName, setFullName] = useState("")
   const [department, setDepartment] = useState("")
   const [institutionalId, setInstitutionalId] = useState("")
+  const [placeOfBirth, setPlaceOfBirth] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
   const [alumniYear, setAlumniYear] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -51,6 +55,8 @@ export function AdminStudentRecordEditPage() {
     setFullName(user.full_name ?? "")
     setDepartment(user.department ?? "")
     setInstitutionalId(user.institutional_id ?? "")
+    setPlaceOfBirth(user.place_of_birth ?? "")
+    setDateOfBirth(user.date_of_birth ?? "")
     setIsActive(user.is_active)
     setAlumniYear(user.alumni_year != null ? String(user.alumni_year) : "")
     setPhotoFile(null)
@@ -89,6 +95,9 @@ export function AdminStudentRecordEditPage() {
         full_name: fullName.trim(),
         department: department.trim() || undefined,
         institutional_id: institutionalId.trim() || null,
+        place_of_birth: recordRole === "STUDENT" ? placeOfBirth.trim() : undefined,
+        date_of_birth:
+          recordRole === "STUDENT" ? (dateOfBirth.trim() || null) : undefined,
         is_active: isActive,
         role: recordRole,
         alumni_year,
@@ -180,12 +189,7 @@ export function AdminStudentRecordEditPage() {
 
           <label className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Department</span>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
-            />
+            <StudentDepartmentSelect value={department} onChange={setDepartment} />
           </label>
 
           <label className="space-y-1">
@@ -199,6 +203,30 @@ export function AdminStudentRecordEditPage() {
               className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
             />
           </label>
+
+          {recordRole === "STUDENT" ? (
+            <>
+              <label className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">
+                  Place of birth
+                </span>
+                <input
+                  type="text"
+                  value={placeOfBirth}
+                  onChange={(e) => setPlaceOfBirth(e.target.value)}
+                  placeholder="e.g. Medan"
+                  className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
+                />
+              </label>
+
+              <DatePickerField
+                label="Date of birth"
+                value={dateOfBirth}
+                onChange={setDateOfBirth}
+                placeholder="Select date of birth"
+              />
+            </>
+          ) : null}
 
           {recordRole === "ALUMNI" ? (
             <label className="space-y-1">

@@ -7,6 +7,8 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
+from django.utils.translation import gettext_lazy as _
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import (
     CustomUser,
@@ -15,7 +17,41 @@ from .models import (
     StaffProfile,
     AlumniProfile,
     DigitalCard,
+    EmailVerificationCode,
 )
+from .student_departments import resolve_student_department
+from .services.image_processing import process_uploaded_avatar
+
+
+def _compress_photo(value):
+    """Normalize an uploaded profile photo to a compressed WebP.
+
+    Returns the value unchanged when it is empty/None (e.g. photo removal).
+    """
+    if not value:
+        return value
+    try:
+        return process_uploaded_avatar(value)
+    except Exception:
+        # If the image can't be processed, fall back to the original upload so
+        # DRF's own image validation surfaces a meaningful error.
+        if hasattr(value, "seek"):
+            value.seek(0)
+        return value
+
+
+def _validate_student_role_department(attrs, role: str | UserRole, *, instance=None):
+    """Enforce fixed department choices for student and alumni records."""
+    if role not in (UserRole.STUDENT, UserRole.ALUMNI):
+        return attrs
+    if "department" not in attrs:
+        return attrs
+
+    department, error = resolve_student_department(attrs.get("department"))
+    if error:
+        raise serializers.ValidationError({"department": error})
+    attrs["department"] = department
+    return attrs
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +83,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     is_superuser = serializers.BooleanField(read_only=True)
     staff_profile = serializers.SerializerMethodField()
     lecturer_profile = serializers.SerializerMethodField()
+    pending_email_change = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -59,9 +96,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "photo",
             "department",
             "institutional_id",
+            "place_of_birth",
+            "date_of_birth",
             "joined_date",
             "alumni_year",
             "email_verified",
+            "pending_email_change",
             "is_active",
             "is_staff",
             "is_superuser",
@@ -94,6 +134,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
         text = str(value).strip()
         return text or None
 
+    def validate_photo(self, value):
+        return _compress_photo(value)
+
     def validate(self, attrs):
         inst = attrs.get("institutional_id")
         if inst:
@@ -102,7 +145,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"institutional_id": "This ID is already registered."})
         if self.instance.role == UserRole.ADMIN:
             attrs["department"] = ""
-        return attrs
+        role = attrs.get("role", self.instance.role)
+        return _validate_student_role_department(attrs, role, instance=self.instance)
 
     def get_staff_profile(self, obj):
         """Staff directory privileges are not exposed on user payloads; use staff profile APIs as admin."""
@@ -119,6 +163,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "contact_phone": lp.contact_phone,
             "address": lp.address,
         }
+
+    def get_pending_email_change(self, obj):
+        return EmailVerificationCode.get_pending_email_change(obj)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -175,7 +222,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if role == UserRole.ADMIN:
             attrs["department"] = ""
 
-        return attrs
+        return _validate_student_role_department(attrs, role or UserRole.STUDENT)
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -235,6 +282,8 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
             "photo",
             "department",
             "institutional_id",
+            "place_of_birth",
+            "date_of_birth",
             "is_active",
             "role",
             "alumni_year",
@@ -247,6 +296,9 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
             return None
         text = str(value).strip()
         return text or None
+
+    def validate_photo(self, value):
+        return _compress_photo(value)
 
     def validate(self, attrs):
         inst = attrs.get("institutional_id")
@@ -272,7 +324,8 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
             else:
                 raise serializers.ValidationError({"role": "Role must be Student or Alumni."})
 
-        return attrs
+        role = attrs.get("role", self.instance.role)
+        return _validate_student_role_department(attrs, role, instance=self.instance)
 
     def update(self, instance, validated_data):
         lec_keys = ("contact_phone", "address")
@@ -290,6 +343,63 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
             profile.save()
 
         return user
+
+
+class RequestEmailChangeSerializer(serializers.Serializer):
+    """Request a verification code to change the authenticated user's email."""
+
+    new_email = serializers.EmailField()
+
+    def validate_new_email(self, value):
+        email = value.strip().lower()
+        user = self.context["request"].user
+        if email == user.email.lower():
+            raise serializers.ValidationError("This is already your current email address.")
+        if CustomUser.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("This email address is already in use.")
+        return email
+
+
+class VerifyEmailCodeSerializer(serializers.Serializer):
+    """Verify a 6-digit email code for the authenticated user."""
+
+    code = serializers.RegexField(regex=r"^\d{6}$", min_length=6, max_length=6)
+
+
+class HubTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    JWT login for the public hub.
+
+    Accepts email (default) or institutional ID (NIM/NIP) for student, lecturer,
+    and alumni accounts. Staff and admin must sign in with email.
+    """
+
+    _INSTITUTIONAL_ID_ROLES = (
+        UserRole.STUDENT,
+        UserRole.LECTURER,
+        UserRole.ALUMNI,
+    )
+
+    def validate(self, attrs):
+        raw = (attrs.get(self.username_field) or "").strip()
+        if not raw:
+            raise serializers.ValidationError(
+                {self.username_field: _("This field is required.")}
+            )
+
+        if "@" not in raw:
+            user = CustomUser.objects.filter(
+                institutional_id__iexact=raw,
+                role__in=self._INSTITUTIONAL_ID_ROLES,
+                is_active=True,
+            ).first()
+            if user is None:
+                raise serializers.ValidationError(
+                    _("No active account found with the given credentials")
+                )
+            attrs[self.username_field] = user.email
+
+        return super().validate(attrs)
 
 
 class ForgotPasswordRequestSerializer(serializers.Serializer):

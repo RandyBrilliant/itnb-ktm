@@ -6,6 +6,9 @@ import type { UserRole } from "@/types/auth"
 import { getRoleNavigation } from "@/lib/role-navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { getRoleBasePath } from "@/lib/role-path"
+import { resolveMediaUrl } from "@/lib/media-url"
+import { useAcademicYearSubtitle } from "@/hooks/use-academic-year-subtitle"
+import { ConfirmLogoutModal } from "@/components/auth/confirm-logout-modal"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -32,7 +35,7 @@ interface SidebarNavProps {
   avatarUrl?: string
   isActive: (href: string) => boolean
   onNavigate?: () => void
-  onLogout: () => void
+  onRequestLogout: () => void
   showClose?: boolean
   onClose?: () => void
 }
@@ -44,7 +47,7 @@ function SidebarNav({
   avatarUrl,
   isActive,
   onNavigate,
-  onLogout,
+  onRequestLogout,
   showClose,
   onClose,
 }: SidebarNavProps) {
@@ -61,25 +64,15 @@ function SidebarNav({
     <div className="flex h-full flex-col">
       <div className="border-b border-[#f0f0f0] px-5 pb-5 pt-6">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#af0f24]/10">
-              <img
-                src="/img/logo-single.png"
-                alt="IT&B"
-                className="h-8 w-8 object-contain"
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-[#af0f24]">
-                Institut Bisnis
-              </p>
-              <p className="truncate text-lg font-extrabold tracking-tight text-[#1a1c1c]">
-                IT&amp;B Hub
-              </p>
-              <p className="mt-0.5 text-[11px] font-semibold text-[#8a8a8a]">
-                {ROLE_PORTAL_LABEL[role]}
-              </p>
-            </div>
+          <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+            <img
+              src="/img/logo-full.png"
+              alt="IT&B"
+              className="h-auto w-full max-w-[168px] object-contain"
+            />
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#af0f24]">
+              {ROLE_PORTAL_LABEL[role]}
+            </p>
           </div>
           {showClose ? (
             <button
@@ -168,7 +161,7 @@ function SidebarNav({
           </Link>
           <button
             type="button"
-            onClick={onLogout}
+            onClick={onRequestLogout}
             className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#af0f24] transition-colors hover:bg-[#fff4f4]"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -188,10 +181,14 @@ export function RoleShell({
   children,
 }: RoleShellProps) {
   const location = useLocation()
+  const academicYearSubtitle = useAcademicYearSubtitle(role)
+  const displaySubtitle = subtitle ?? academicYearSubtitle
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const menuContainerRef = useRef<HTMLDivElement | null>(null)
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navItems = useMemo(() => getRoleNavigation(role), [role])
   const mobileNavItems = useMemo(() => {
     const idItem = navItems.find((item) => item.id === "id")
@@ -204,7 +201,15 @@ export function RoleShell({
     return [...others.slice(0, middleIndex), idItem, ...others.slice(middleIndex)]
   }, [navItems])
   const basePath = getRoleBasePath(role)
-  const initials = role.slice(0, 1)
+  const displayName = user?.full_name || role.charAt(0) + role.slice(1).toLowerCase()
+  const userInitials = displayName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+  const resolvedAvatarUrl =
+    avatarUrl ?? (user?.photo ? resolveMediaUrl(user.photo) : undefined)
 
   const isActive = (href: string): boolean => {
     if (href === "/student" || href === "/staff" || href === "/lecturer") {
@@ -214,12 +219,24 @@ export function RoleShell({
   }
 
   const handleLogout = async () => {
+    if (isLoggingOut) return
     try {
+      setIsLoggingOut(true)
       await logout({ redirectTo: "/login", callApi: true })
       toast.success("Logged out successfully")
     } catch (error) {
       toast.error("Logout failed", getUserFriendlyError(error, "logout"))
+    } finally {
+      setIsLoggingOut(false)
+      setShowLogoutModal(false)
+      setMenuOpen(false)
+      setDrawerOpen(false)
     }
+  }
+
+  const requestLogout = () => {
+    setMenuOpen(false)
+    setShowLogoutModal(true)
   }
 
   useEffect(() => {
@@ -254,12 +271,13 @@ export function RoleShell({
     role,
     navItems,
     basePath,
-    avatarUrl,
+    avatarUrl: resolvedAvatarUrl,
     isActive,
-    onLogout: handleLogout,
+    onRequestLogout: requestLogout,
   }
 
   return (
+    <>
     <div className="min-h-screen bg-[#f9f9f9]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-[#ececec] bg-white shadow-[4px_0_24px_rgba(0,0,0,0.04)] lg:flex">
         <div className="absolute inset-y-0 left-0 w-1 bg-[#af0f24]" aria-hidden />
@@ -278,9 +296,9 @@ export function RoleShell({
           </button>
           <div>
             <p className="text-sm font-extrabold tracking-tight text-[#1a1c1c]">{title}</p>
-            {subtitle ? (
+            {displaySubtitle ? (
               <p className="text-xs font-semibold uppercase tracking-wider text-[#5f5e5e]">
-                {subtitle}
+                {displaySubtitle}
               </p>
             ) : null}
           </div>
@@ -298,11 +316,11 @@ export function RoleShell({
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+            {resolvedAvatarUrl ? (
+              <img src={resolvedAvatarUrl} alt="Profile" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xs font-bold text-[#af0f24]">
-                {initials}
+                {userInitials}
               </div>
             )}
           </button>
@@ -330,7 +348,7 @@ export function RoleShell({
               </Link>
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={requestLogout}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#af0f24] hover:bg-[#fff4f4]"
               >
                 <span className="material-symbols-outlined text-base">logout</span>
@@ -448,5 +466,13 @@ export function RoleShell({
         </div>
       </nav>
     </div>
+
+    <ConfirmLogoutModal
+      open={showLogoutModal}
+      isLoading={isLoggingOut}
+      onCancel={() => setShowLogoutModal(false)}
+      onConfirm={handleLogout}
+    />
+    </>
   )
 }

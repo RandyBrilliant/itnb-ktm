@@ -30,5 +30,9 @@ daphne==4.0.0
 
 # Utilities
 python-dateutil==2.8.2
-requests==2.31.0
+requests==2.32.3
+chardet>=3.0.2,<6
 openpyxl==3.1.2
+
+# MariaDB / MySQL (read-only SIS connection)
+PyMySQL==1.1.1

@@ -16,7 +16,6 @@ export function LoginPage() {
   const { login, logout, isLoading } = useAuth()
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
-  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState("")
 
   const handleSubmit = async (e: FormEvent) => {
@@ -32,16 +31,16 @@ export function LoginPage() {
       const user = await login(identifier, password, { redirect: false })
       if (user.role === "ADMIN") {
         toast.info("Admin portal required", "Please sign in from /admin/login.")
+        setPassword("")
         setError("Admin account must sign in from /admin/login.")
         await logout({ redirectTo: "/admin/login", callApi: false })
         return
       }
-      localStorage.setItem("remember_login", rememberMe ? "true" : "false")
-
       toast.success("Login successful", "Redirecting to dashboard...")
       navigate(getDashboardRouteForRole(user.role), { replace: true })
     } catch (err: unknown) {
       const errorMessage = getUserFriendlyError(err, "login")
+      setPassword("")
       setError(errorMessage)
       toast.error("Login failed", errorMessage)
     }
@@ -63,12 +62,10 @@ export function LoginPage() {
         <LoginCard
           identifier={identifier}
           password={password}
-          rememberMe={rememberMe}
           isLoading={isLoading}
           error={error}
           onIdentifierChange={setIdentifier}
           onPasswordChange={setPassword}
-          onRememberChange={setRememberMe}
           onSubmit={handleSubmit}
           onForgotPassword={() => navigate("/forgot-password")}
         />

@@ -11,6 +11,7 @@ import {
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
 import { PaginationControls } from "@/components/content/pagination-controls"
 
 function statusBadge(status: CertificateProgramItem["batch_status"]) {
@@ -27,6 +28,7 @@ export function AdminCertificatesPage() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<CertificateProgramItem | null>(null)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-certificate-programs", page],
@@ -50,15 +52,15 @@ export function AdminCertificatesPage() {
 
   const programs = data?.results ?? []
 
-  const handleDelete = async (p: CertificateProgramItem) => {
-    const ok = window.confirm(`Delete batch "${p.title}"? Issued certificates from this batch will be removed.`)
-    if (!ok) return
+  const handleDelete = async () => {
+    if (!pendingDelete) return
     try {
-      setDeletingId(p.id)
-      await deleteCertificateProgram(p.id)
+      setDeletingId(pendingDelete.id)
+      await deleteCertificateProgram(pendingDelete.id)
       toast.success("Batch deleted")
       await queryClient.invalidateQueries({ queryKey: ["admin-certificate-programs"] })
       refetch()
+      setPendingDelete(null)
     } catch (error) {
       toast.error("Delete failed", getUserFriendlyError(error, "generic"))
     } finally {
@@ -164,7 +166,7 @@ export function AdminCertificatesPage() {
                     <button
                       type="button"
                       disabled={deletingId === p.id}
-                      onClick={() => handleDelete(p)}
+                      onClick={() => setPendingDelete(p)}
                       className="inline-flex items-center gap-1 rounded-lg border border-[#e8bcbc] px-3 py-2 text-xs font-bold uppercase tracking-[0.1em] text-[#af0f24] hover:bg-red-50 disabled:opacity-50"
                     >
                       <Trash2 size={14} />
@@ -178,6 +180,21 @@ export function AdminCertificatesPage() {
           </div>
         )}
       </div>
+      <ConfirmActionModal
+        open={pendingDelete !== null}
+        isLoading={deletingId === pendingDelete?.id}
+        title="Delete batch"
+        description={
+          pendingDelete
+            ? `Delete batch "${pendingDelete.title}"? Issued certificates from this batch will be removed.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onCancel={() => {
+          if (deletingId === null) setPendingDelete(null)
+        }}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }
