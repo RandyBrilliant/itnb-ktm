@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { getPost, updatePost, type PostCategory } from "@/api/posts"
 import { ImageUploadField } from "@/components/ui/image-upload-field"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { formatAppDateTime } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -11,7 +12,7 @@ const CATEGORY_OPTIONS: PostCategory[] = ["ANNOUNCEMENT", "NEWS", "EVENT", "ACAD
 
 function formatDate(value?: string) {
   if (!value) return "—"
-  return new Date(value).toLocaleString()
+  return formatAppDateTime(value)
 }
 
 export function AdminPostEditPage() {

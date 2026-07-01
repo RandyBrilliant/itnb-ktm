@@ -1,13 +1,7 @@
+import { formatAppDateLong } from "@/lib/datetime"
+
 export function formatBirthDate(value?: string | null): string {
-  if (!value) return "—"
-  const parts = value.split("-").map(Number)
-  if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return value
-  const [year, month, day] = parts
-  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
+  return formatAppDateLong(value)
 }
 
 export function formatBirthPlaceDate(

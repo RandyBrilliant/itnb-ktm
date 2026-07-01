@@ -12,16 +12,16 @@ import {
 import { authKeys } from "@/hooks/use-auth-query"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { formatAppDateTime } from "@/lib/datetime"
 import { formatBirthDate } from "@/lib/format-birth"
 import { formatUserEmailLabel, requiresEmailSetup } from "@/lib/email-setup"
+import { toast } from "@/lib/toast"
 
 type EmailMode = "view" | "verify" | "change" | "change-verify"
 
 function renderDateTime(value?: string | null) {
   if (!value) return "—"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
-  return date.toLocaleString()
+  return formatAppDateTime(value)
 }
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {

@@ -1,12 +1,11 @@
 import type { ReactNode } from "react"
 import { Check, X } from "lucide-react"
 import type { User } from "@/types/auth"
+import { formatAppDateTime } from "@/lib/datetime"
 
 function renderDate(value?: string | null) {
   if (!value) return "—"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
-  return date.toLocaleString()
+  return formatAppDateTime(value)
 }
 
 function MetadataRow({ label, value }: { label: string; value: ReactNode }) {

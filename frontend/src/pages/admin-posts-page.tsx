@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Edit2, Plus, Search, Trash2 } from "lucide-react"
 import { deletePost, listPosts, type PostCategory, type PostItem } from "@/api/posts"
 import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
+import { formatAppDateTime } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -11,7 +12,7 @@ const CATEGORY_OPTIONS: PostCategory[] = ["ANNOUNCEMENT", "NEWS", "EVENT", "ACAD
 
 function formatDate(value?: string) {
   if (!value) return "Unpublished"
-  return new Date(value).toLocaleString()
+  return formatAppDateTime(value)
 }
 
 export function AdminPostsPage() {

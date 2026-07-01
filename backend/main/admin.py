@@ -68,7 +68,7 @@ class WebinarRegistrationInline(admin.TabularInline):
 
 @admin.register(Webinar)
 class WebinarAdmin(admin.ModelAdmin):
-    list_display = ("post", "mode", "status", "starts_at", "ends_at", "certificate_program")
+    list_display = ("post", "mode", "status", "starts_at", "certificate_program")
     list_filter = ("mode", "status", "starts_at")
     search_fields = ("post__title",)
     readonly_fields = ("created_at", "updated_at", "attendance_secret")

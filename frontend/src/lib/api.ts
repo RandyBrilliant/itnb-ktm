@@ -64,7 +64,8 @@ api.interceptors.response.use(
       requestUrl.includes("/api/auth/token/") ||
       requestUrl.includes("/api/token/") ||
       requestUrl.includes("/api/auth/token/refresh/") ||
-      requestUrl.includes("/api/token/refresh/")
+      requestUrl.includes("/api/token/refresh/") ||
+      requestUrl.includes("/api/cards/verify/")
 
     // Do not refresh when the failing request is itself a login/refresh call.
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {

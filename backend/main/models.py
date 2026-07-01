@@ -71,13 +71,9 @@ def generate_attendance_secret() -> str:
 
 def default_certificate_layout():
     """Relative coordinates (0–1) for text on the template image."""
-    return {
-        "name_y_ratio": 0.42,
-        "id_y_ratio": 0.48,
-        "name_font_ratio": 0.038,
-        "id_font_ratio": 0.024,
-        "text_color": "#1a1a1a",
-    }
+    from main.services.certificate_layout import default_certificate_layout as _default
+
+    return _default()
 
 
 class CertificateProgram(models.Model):
@@ -102,7 +98,9 @@ class CertificateProgram(models.Model):
     recipients_file = models.FileField(
         _("recipients spreadsheet"),
         upload_to="certificate_batches/%Y/%m/",
-        help_text=_("Excel file with Name and ID columns."),
+        null=True,
+        blank=True,
+        help_text=_("Excel file with Name and ID columns. Not required for webinar auto-issue."),
     )
     batch_status = models.CharField(
         _("batch status"),
@@ -275,7 +273,6 @@ class Webinar(models.Model):
         _("mode"), max_length=10, choices=WebinarMode.choices, default=WebinarMode.OFFLINE
     )
     starts_at = models.DateTimeField(_("starts at"))
-    ends_at = models.DateTimeField(_("ends at"))
     location = models.CharField(_("location"), max_length=255, blank=True)
     online_url = models.URLField(_("online meeting URL"), blank=True)
     capacity = models.PositiveIntegerField(_("capacity"), null=True, blank=True)
@@ -310,6 +307,8 @@ class Webinar(models.Model):
         if self.status != WebinarStatus.PUBLISHED:
             return False
         now = timezone.now()
+        if now >= self.starts_at:
+            return False
         if self.registration_opens_at and now < self.registration_opens_at:
             return False
         if self.registration_closes_at and now > self.registration_closes_at:

@@ -11,11 +11,12 @@ export interface PostWebinarSummary {
   mode: string
   mode_display?: string
   starts_at: string
-  ends_at: string
   location?: string
   online_url?: string
   is_registration_open: boolean
   is_full: boolean
+  check_in_open?: boolean
+  check_in_opens_at?: string | null
   auto_issue_certificate: boolean
   certificate_program?: { id: number; title: string } | null
   my_registration: WebinarMyRegistration | null

@@ -5,12 +5,13 @@ import { listPosts } from "@/api/posts"
 import type { UserRole } from "@/types/auth"
 import { getRoleBasePath } from "@/lib/role-path"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { formatAppDate } from "@/lib/datetime"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { PaginationControls } from "@/components/content/pagination-controls"
 
 function formatDate(value?: string) {
   if (!value) return "Unpublished"
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+  return formatAppDate(value)
 }
 
 export function NewsPage({ role }: { role: UserRole }) {

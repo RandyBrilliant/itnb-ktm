@@ -8,12 +8,13 @@ import {
   getWebinar,
   listWebinarRegistrations,
 } from "@/api/webinars"
+import { formatAppDateTime } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
 function formatTime(value?: string | null) {
   if (!value) return "—"
-  return new Date(value).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+  return formatAppDateTime(value)
 }
 
 export function AdminWebinarAttendancePage() {
@@ -25,21 +26,25 @@ export function AdminWebinarAttendancePage() {
     queryKey: ["admin-webinar", webinarId],
     queryFn: () => getWebinar(webinarId),
     enabled: Number.isFinite(webinarId),
+    refetchInterval: 60000,
   })
 
-  const { data: token } = useQuery({
+  const qrAvailable = webinar?.attendance_qr_available ?? false
+
+  const { data: token, isLoading: tokenLoading } = useQuery({
     queryKey: ["webinar-attendance-token", webinarId, phase],
     queryFn: () => getAttendanceToken(webinarId, phase),
-    enabled: Number.isFinite(webinarId),
-    refetchInterval: 20000,
+    enabled: Number.isFinite(webinarId) && qrAvailable,
+    refetchInterval: qrAvailable ? 20000 : false,
     refetchIntervalInBackground: true,
+    retry: false,
   })
 
   const { data: participants } = useQuery({
     queryKey: ["webinar-registrations", webinarId],
     queryFn: () => listWebinarRegistrations(webinarId, 1),
     enabled: Number.isFinite(webinarId),
-    refetchInterval: 10000,
+    refetchInterval: qrAvailable ? 10000 : false,
   })
 
   const handleExport = async () => {
@@ -65,7 +70,8 @@ export function AdminWebinarAttendancePage() {
           {webinar?.post.title ?? "Attendance"}
         </h1>
         <p className="mt-1 text-sm text-[#5f5e5e]">
-          Display this screen at the venue. Attendees scan the rotating code to {phase === "in" ? "check in" : "check out"}.
+          The attendance QR appears 30 minutes before the webinar starts. Attendees scan the rotating code to{" "}
+          {phase === "in" ? "check in" : "check out"}.
         </p>
       </div>
 
@@ -92,7 +98,20 @@ export function AdminWebinarAttendancePage() {
             </button>
           </div>
 
-          {token ? (
+          {!webinar ? (
+            <div className="flex h-64 items-center justify-center text-sm text-[#5f5e5e]">Loading...</div>
+          ) : !qrAvailable ? (
+            <div className="flex h-64 flex-col items-center justify-center gap-2 px-4 text-sm text-[#5f5e5e]">
+              <p className="font-semibold text-[#1a1c1c]">QR not available yet</p>
+              <p>
+                Opens at{" "}
+                <span className="font-medium text-[#af0f24]">
+                  {formatAppDateTime(webinar.attendance_qr_opens_at)}
+                </span>
+              </p>
+              <p className="text-xs text-[#8a8989]">This page refreshes automatically when the window opens.</p>
+            </div>
+          ) : token ? (
             <div className="flex flex-col items-center gap-4">
               <img
                 src={token.qr_data_url}
@@ -110,7 +129,9 @@ export function AdminWebinarAttendancePage() {
               </div>
             </div>
           ) : (
-            <div className="flex h-64 items-center justify-center text-sm text-[#5f5e5e]">Loading code...</div>
+            <div className="flex h-64 items-center justify-center text-sm text-[#5f5e5e]">
+              {tokenLoading ? "Loading code..." : "Unable to load attendance code."}
+            </div>
           )}
         </div>
 

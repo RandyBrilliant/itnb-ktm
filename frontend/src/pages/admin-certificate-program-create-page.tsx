@@ -1,8 +1,10 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createCertificateProgram } from "@/api/certificate-programs"
+import { CertificateLayoutEditor } from "@/components/certificates/certificate-layout-editor"
 import { DatePickerField } from "@/components/ui/date-picker-field"
+import { type CertificateLayout, defaultCertificateLayout } from "@/lib/certificate-layout"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -14,8 +16,19 @@ export function AdminCertificateProgramCreatePage() {
   const [issuedDate, setIssuedDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [validUntil, setValidUntil] = useState("")
   const [templateImage, setTemplateImage] = useState<File | null>(null)
+  const [templatePreviewUrl, setTemplatePreviewUrl] = useState<string | null>(null)
   const [recipientsFile, setRecipientsFile] = useState<File | null>(null)
-  const [layoutJson, setLayoutJson] = useState("")
+  const [layout, setLayout] = useState<CertificateLayout>(defaultCertificateLayout)
+
+  useEffect(() => {
+    if (!templateImage) {
+      setTemplatePreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(templateImage)
+    setTemplatePreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [templateImage])
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -26,7 +39,7 @@ export function AdminCertificateProgramCreatePage() {
         validUntil: validUntil.trim() ? validUntil : null,
         templateImage: templateImage!,
         recipientsFile: recipientsFile!,
-        layoutJson: layoutJson.trim() || undefined,
+        layout,
       }),
     onSuccess: () => {
       toast.success("Batch created", "Recipients are being processed in the background.")
@@ -44,14 +57,6 @@ export function AdminCertificateProgramCreatePage() {
       toast.error("Missing files", "Upload both the certificate template image and the Excel file.")
       return
     }
-    if (layoutJson.trim()) {
-      try {
-        JSON.parse(layoutJson)
-      } catch {
-        toast.error("Invalid layout JSON", "Fix the optional layout JSON or leave it empty.")
-        return
-      }
-    }
     mutation.mutate()
   }
 
@@ -63,7 +68,7 @@ export function AdminCertificateProgramCreatePage() {
         <p className="mt-1 max-w-3xl text-sm text-[#5f5e5e]">
           Upload an A4-sized JPG or PNG template and an Excel file with <strong>Name</strong> and <strong>ID</strong>{" "}
           columns. Each row is matched to a portal user by official ID (or email / digital card number when applicable).
-          Celery workers overlay the name and ID and attach the PDF to each user&apos;s certificate list.
+          Students view their certificate in the portal; PDF download is generated only when requested.
         </p>
       </div>
 
@@ -116,7 +121,11 @@ export function AdminCertificateProgramCreatePage() {
               type="file"
               accept="image/jpeg,image/png"
               className="text-sm file:mr-3 file:rounded-sm file:border file:border-[#ddd] file:bg-white file:px-3 file:py-2"
-              onChange={(e) => setTemplateImage(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null
+                setTemplateImage(file)
+                if (file) setLayout(defaultCertificateLayout())
+              }}
             />
           </label>
           <label className="block space-y-1">
@@ -131,20 +140,11 @@ export function AdminCertificateProgramCreatePage() {
           </label>
         </div>
 
-        <label className="block space-y-1">
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">
-            Layout overrides (optional JSON)
-          </span>
-          <textarea
-            className="min-h-[100px] w-full rounded-sm border border-[#ddd] px-3 py-2 font-mono text-xs"
-            value={layoutJson}
-            onChange={(e) => setLayoutJson(e.target.value)}
-            placeholder={`{\n  "name_y_ratio": 0.42,\n  "id_y_ratio": 0.48,\n  "name_font_ratio": 0.038,\n  "id_font_ratio": 0.024,\n  "text_color": "#1a1a1a"\n}`}
-          />
-          <span className="text-xs text-[#8a8a8a]">
-            Ratios are relative to image height (0–1). Tune these if text does not align with your artwork.
-          </span>
-        </label>
+        <CertificateLayoutEditor
+          templateUrl={templatePreviewUrl}
+          value={layout}
+          onChange={setLayout}
+        />
 
         <div className="flex flex-wrap gap-3 border-t border-[#ececec] pt-4">
           <button

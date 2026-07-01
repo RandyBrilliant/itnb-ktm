@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from django.conf import settings
+from account.services.card_validity import effective_card_valid_until
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -82,7 +83,8 @@ def generate_digital_card_image(user, card_type: str) -> Image.Image:
     name = (user.full_name or "Student").strip()
     department = (user.department or card_type.title()).strip()
     card_number = getattr(getattr(user, "digital_card", None), "card_number", None) or "-"
-    valid_until = getattr(getattr(user, "digital_card", None), "valid_until", None)
+    card = getattr(user, "digital_card", None)
+    valid_until = effective_card_valid_until(card) if card else None
     valid_until_text = valid_until.strftime("%B %Y") if valid_until else "-"
 
     place = (getattr(user, "place_of_birth", None) or "").strip()

@@ -1,8 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { getWebinar, updateWebinar } from "@/api/webinars"
-import { WebinarForm, toDatetimeLocal } from "@/components/admin/webinar-form"
+import { WebinarForm } from "@/components/admin/webinar-form"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { splitAppDatetime, splitRegistrationDateRange } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -22,6 +23,11 @@ export function AdminWebinarEditPage() {
   }
 
   const existingImageUrl = resolveMediaUrl(webinar.post.image) || webinar.post.image_url || ""
+  const schedule = splitAppDatetime(webinar.starts_at)
+  const registrationRange = splitRegistrationDateRange(
+    webinar.registration_opens_at,
+    webinar.registration_closes_at
+  )
 
   return (
     <div className="space-y-8">
@@ -34,18 +40,21 @@ export function AdminWebinarEditPage() {
       <WebinarForm
         submitLabel="Save Changes"
         existingImageUrl={existingImageUrl}
+        existingCertificateTemplateUrl={
+          resolveMediaUrl(webinar.certificate_program?.template_image ?? null) || undefined
+        }
+        initialCertificateLayout={webinar.certificate_program?.layout}
         initial={{
           title: webinar.post.title,
           body: webinar.post.body,
           mode: webinar.mode,
-          starts_at: toDatetimeLocal(webinar.starts_at),
-          ends_at: toDatetimeLocal(webinar.ends_at),
+          schedule_date: schedule.date,
+          schedule_time: schedule.time,
           location: webinar.location ?? "",
           online_url: webinar.online_url ?? "",
           capacity: webinar.capacity != null ? String(webinar.capacity) : "",
-          registration_opens_at: toDatetimeLocal(webinar.registration_opens_at),
-          registration_closes_at: toDatetimeLocal(webinar.registration_closes_at),
-          certificate_program: webinar.certificate_program?.id ?? null,
+          registration_range: registrationRange,
+          certificate_valid_until: webinar.certificate_program?.valid_until?.slice(0, 10) ?? "",
           auto_issue_certificate: webinar.auto_issue_certificate,
           is_published: webinar.post.is_published,
         }}

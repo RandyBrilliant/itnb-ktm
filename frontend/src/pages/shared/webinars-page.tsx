@@ -15,27 +15,24 @@ import { getRoleBasePath } from "@/lib/role-path"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { PaginationControls } from "@/components/content/pagination-controls"
+import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
+import { formatAppDateTime, formatAppWebinarSchedule } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
-function formatRange(start: string, end: string) {
-  const s = new Date(start)
-  const e = new Date(end)
-  const dateStr = s.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "2-digit", year: "numeric" })
-  const timeOpts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" }
-  return `${dateStr} · ${s.toLocaleTimeString("en-US", timeOpts)} – ${e.toLocaleTimeString("en-US", timeOpts)}`
-}
 
 function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }) {
   const queryClient = useQueryClient()
   const [code, setCode] = useState("")
   const [showCheckIn, setShowCheckIn] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
   const basePath = getRoleBasePath(role)
   const image = resolveMediaUrl(webinar.post.image) || webinar.post.image_url || ""
 
   const reg = webinar.my_registration
   const isRegistered = reg != null && reg.status !== "CANCELLED"
   const isOnline = webinar.mode === "ONLINE" || webinar.mode === "HYBRID"
+  const checkInOpen = webinar.check_in_open ?? false
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: [role, "webinars"] })
 
@@ -52,6 +49,7 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
     mutationFn: () => cancelWebinarRegistration(webinar.id),
     onSuccess: () => {
       toast.success("Registration cancelled")
+      setShowCancelModal(false)
       invalidate()
     },
     onError: (error) => toast.error("Failed to cancel", getUserFriendlyError(error, "generic")),
@@ -106,7 +104,7 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
         <div className="space-y-1.5 text-sm text-[#5f5e5e]">
           <p className="flex items-center gap-2">
             <CalendarDays size={16} className="text-[#af0f24]" />
-            {formatRange(webinar.starts_at, webinar.ends_at)}
+            {formatAppWebinarSchedule(webinar.starts_at)}
           </p>
           {webinar.location ? (
             <p className="flex items-center gap-2">
@@ -156,10 +154,18 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
               {!reg?.attended ? (
                 <button
                   type="button"
-                  onClick={() => setShowCheckIn((prev) => !prev)}
-                  className="rounded-lg bg-[#af0f24] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-white transition hover:bg-[#930019]"
+                  onClick={() => (checkInOpen ? setShowCheckIn((prev) => !prev) : undefined)}
+                  disabled={!checkInOpen}
+                  title={
+                    checkInOpen
+                      ? undefined
+                      : webinar.check_in_opens_at
+                        ? `Check-in opens at ${formatAppDateTime(webinar.check_in_opens_at)}`
+                        : "Check-in is not open yet"
+                  }
+                  className="rounded-lg bg-[#af0f24] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-white transition hover:bg-[#930019] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Check in
+                  {checkInOpen ? "Check in" : "Check-in closed"}
                 </button>
               ) : (
                 <button
@@ -174,7 +180,7 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
               {!reg?.attended ? (
                 <button
                   type="button"
-                  onClick={() => cancelMutation.mutate()}
+                  onClick={() => setShowCancelModal(true)}
                   disabled={cancelMutation.isPending}
                   className="rounded-lg border border-[#f2b6b6] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-[#af0f24] transition hover:bg-[#fff2f2] disabled:opacity-50"
                 >
@@ -185,7 +191,7 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
           )}
         </div>
 
-        {showCheckIn ? (
+        {showCheckIn && checkInOpen ? (
           <div className="space-y-3 rounded-lg border border-[#ececec] bg-[#fafafa] p-4">
             <p className="text-xs font-semibold text-[#1a1c1c]">
               Enter the code shown on the attendance screen (or scan the QR).
@@ -219,7 +225,28 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
             ) : null}
           </div>
         ) : null}
+
+        {!checkInOpen && isRegistered && !reg?.attended && webinar.check_in_opens_at ? (
+          <p className="text-xs text-[#5f5e5e]">
+            Check-in opens at{" "}
+            <span className="font-semibold text-[#1a1c1c]">
+              {formatAppDateTime(webinar.check_in_opens_at)}
+            </span>
+          </p>
+        ) : null}
       </div>
+
+      <ConfirmActionModal
+        open={showCancelModal}
+        isLoading={cancelMutation.isPending}
+        title="Cancel registration"
+        description={`Are you sure you want to cancel your registration for "${webinar.post.title}"? You can register again later if spots are still available.`}
+        confirmLabel="Yes, cancel"
+        onCancel={() => {
+          if (!cancelMutation.isPending) setShowCancelModal(false)
+        }}
+        onConfirm={() => cancelMutation.mutate()}
+      />
     </article>
   )
 }

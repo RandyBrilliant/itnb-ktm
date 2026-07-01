@@ -1,20 +1,16 @@
 import { Link } from "react-router-dom"
+import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CalendarDays, MapPin } from "lucide-react"
 import { cancelWebinarRegistration, registerWebinar } from "@/api/webinars"
 import type { PostWebinarSummary } from "@/api/posts"
 import type { UserRole } from "@/types/auth"
 import { getRoleBasePath } from "@/lib/role-path"
+import { formatAppWebinarSchedule } from "@/lib/datetime"
+import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
-function formatRange(start: string, end: string) {
-  const s = new Date(start)
-  const e = new Date(end)
-  const dateStr = s.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
-  const timeOpts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" }
-  return `${dateStr} · ${s.toLocaleTimeString("en-US", timeOpts)} – ${e.toLocaleTimeString("en-US", timeOpts)}`
-}
 
 interface WebinarPostCtaProps {
   webinar: PostWebinarSummary
@@ -24,6 +20,7 @@ interface WebinarPostCtaProps {
 
 export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
   const queryClient = useQueryClient()
+  const [showCancelModal, setShowCancelModal] = useState(false)
   const basePath = getRoleBasePath(role)
   const reg = webinar.my_registration
   const isRegistered = reg != null && reg.status !== "CANCELLED"
@@ -47,12 +44,14 @@ export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
     mutationFn: () => cancelWebinarRegistration(webinar.id),
     onSuccess: () => {
       toast.success("Registration cancelled")
+      setShowCancelModal(false)
       invalidate()
     },
     onError: (error) => toast.error("Failed to cancel", getUserFriendlyError(error, "generic")),
   })
 
   return (
+    <>
     <div className="mt-6 rounded-xl border border-[#e8d5d3] bg-[#fdf8f8] p-5">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#af0f24]">Webinar</p>
       <p className="mt-1 font-[var(--font-heading)] text-lg font-extrabold text-[#1a1c1c]">
@@ -62,7 +61,7 @@ export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
       <div className="mt-3 space-y-1.5 text-sm text-[#5f5e5e]">
         <p className="flex items-center gap-2">
           <CalendarDays size={16} className="text-[#af0f24]" />
-          {formatRange(webinar.starts_at, webinar.ends_at)}
+          {formatAppWebinarSchedule(webinar.starts_at)}
         </p>
         {webinar.location ? (
           <p className="flex items-center gap-2">
@@ -108,7 +107,7 @@ export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
               </Link>
               <button
                 type="button"
-                onClick={() => cancelMutation.mutate()}
+                onClick={() => setShowCancelModal(true)}
                 disabled={cancelMutation.isPending}
                 className="rounded-lg border border-[#f2b6b6] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-[#af0f24] transition hover:bg-[#fff2f2] disabled:opacity-50"
               >
@@ -123,5 +122,18 @@ export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
         </p>
       )}
     </div>
+
+    <ConfirmActionModal
+      open={showCancelModal}
+      isLoading={cancelMutation.isPending}
+      title="Cancel registration"
+      description="Are you sure you want to cancel your registration for this webinar? You can register again later if spots are still available."
+      confirmLabel="Yes, cancel"
+      onCancel={() => {
+        if (!cancelMutation.isPending) setShowCancelModal(false)
+      }}
+      onConfirm={() => cancelMutation.mutate()}
+    />
+    </>
   )
 }

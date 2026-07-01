@@ -1,6 +1,7 @@
 import { api } from "@/lib/api"
 import type { ApiSuccessResponse } from "@/types/api"
 import { unwrapApiData } from "@/lib/api-response"
+import type { CertificateLayout } from "@/lib/certificate-layout"
 import type { CertificateItem } from "@/api/certificates"
 
 export type CertificateProgramBatchStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
@@ -19,7 +20,7 @@ export interface CertificateProgramItem {
   title: string
   description: string
   template_image: string | null
-  layout: Record<string, unknown>
+  layout: CertificateLayout | Record<string, unknown>
   issued_date: string
   valid_until: string | null
   issued_by: { id: number; email: string; full_name: string } | null
@@ -59,8 +60,7 @@ export interface CreateCertificateProgramInput {
   validUntil: string | null
   templateImage: File
   recipientsFile: File
-  /** Optional JSON string of layout overrides (name_y_ratio, id_y_ratio, font ratios, text_color). */
-  layoutJson?: string
+  layout?: CertificateLayout
 }
 
 export async function createCertificateProgram(input: CreateCertificateProgramInput): Promise<CertificateProgramItem> {
@@ -73,8 +73,8 @@ export async function createCertificateProgram(input: CreateCertificateProgramIn
   }
   fd.append("template_image", input.templateImage)
   fd.append("recipients_file", input.recipientsFile)
-  if (input.layoutJson?.trim()) {
-    fd.append("layout", input.layoutJson.trim())
+  if (input.layout) {
+    fd.append("layout", JSON.stringify(input.layout))
   }
   const { data } = await api.post<ApiSuccessResponse<CertificateProgramItem> | CertificateProgramItem>(
     "/api/certificate-programs/",

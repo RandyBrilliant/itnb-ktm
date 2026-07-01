@@ -73,6 +73,7 @@ from .services.card_generation import (
     generate_digital_card_image,
     save_card_image_to_bytes,
 )
+from .services.card_validity import effective_card_valid_until, student_card_valid_until
 
 logger = logging.getLogger(__name__)
 
@@ -789,7 +790,12 @@ class DigitalCardViewSet(viewsets.ReadOnlyModelViewSet):
         """Create a default digital card with a fast request path."""
         role = user.role if user.role in {"STUDENT", "LECTURER", "STAFF", "ALUMNI"} else "STUDENT"
         card_number = f"{role[:3]}-{timezone.now().strftime('%Y%m%d')}-{user.id:06d}"
-        valid_until = timezone.now().date() + timedelta(days=365 * 4)
+        if role == "STUDENT":
+            valid_until = student_card_valid_until(user.institutional_id or "")
+            if valid_until is None:
+                valid_until = timezone.now().date() + timedelta(days=365 * 4)
+        else:
+            valid_until = timezone.now().date() + timedelta(days=365 * 4)
 
         card = DigitalCard.objects.create(
             user=user,
@@ -827,4 +833,43 @@ class DigitalCardViewSet(viewsets.ReadOnlyModelViewSet):
 
         return card
 
+
+class VerifyCardView(APIView):
+    """Public digital card verification (QR scan). Returns minimal non-sensitive fields only."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [AuthPublicRateThrottle]
+
+    def get(self, request, card_number: str):
+        card = (
+            DigitalCard.objects.select_related("user")
+            .filter(card_number=card_number)
+            .first()
+        )
+        if card is None:
+            return Response(
+                error_response(detail="Card not found.", code=ApiCode.NOT_FOUND),
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        user = card.user
+        today = timezone.localdate()
+        valid_until = effective_card_valid_until(card)
+        verified = bool(
+            card.is_active
+            and user.is_active
+            and valid_until >= today
+        )
+
+        return Response(
+            success_response(
+                data={
+                    "student_id": user.institutional_id or "",
+                    "verified": verified,
+                    "valid_until": valid_until.isoformat(),
+                }
+            ),
+            status=status.HTTP_200_OK,
+        )
 

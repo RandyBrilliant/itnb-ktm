@@ -3,6 +3,7 @@ import type { ApiSuccessResponse } from "@/types/api"
 import type { PaginatedResponse } from "@/api/certificates"
 import type { PostItem } from "@/api/posts"
 import { unwrapApiData } from "@/lib/api-response"
+import type { CertificateLayout } from "@/lib/certificate-layout"
 
 export type WebinarMode = "ONLINE" | "OFFLINE" | "HYBRID"
 export type WebinarStatus = "DRAFT" | "PUBLISHED" | "COMPLETED" | "CANCELLED"
@@ -25,18 +26,27 @@ export interface WebinarItem {
   mode: WebinarMode
   mode_display?: string
   starts_at: string
-  ends_at: string
   location?: string
   online_url?: string
   capacity?: number | null
   registration_opens_at?: string | null
   registration_closes_at?: string | null
-  certificate_program?: { id: number; title: string } | null
+  certificate_program?: {
+    id: number
+    title: string
+    template_image?: string | null
+    valid_until?: string | null
+    layout?: CertificateLayout | Record<string, unknown>
+  } | null
   auto_issue_certificate: boolean
   status: WebinarStatus
   status_display?: string
   is_registration_open: boolean
   is_full: boolean
+  check_in_open?: boolean
+  attendance_qr_available?: boolean
+  check_in_opens_at?: string | null
+  attendance_qr_opens_at?: string | null
   registration_count: number
   attendee_count: number
   my_registration: WebinarMyRegistration | null
@@ -89,13 +99,15 @@ export interface WebinarPayload {
   is_published?: boolean
   mode?: WebinarMode
   starts_at?: string
-  ends_at?: string
   location?: string
   online_url?: string
   capacity?: number | null
   registration_opens_at?: string | null
   registration_closes_at?: string | null
   certificate_program?: number | null
+  certificateTemplateFile?: File | null
+  certificate_valid_until?: string | null
+  certificate_layout?: CertificateLayout
   auto_issue_certificate?: boolean
 }
 
@@ -107,10 +119,18 @@ function buildParams(filters?: WebinarFilters): string {
   return params ? `?${params}` : ""
 }
 
+function needsMultipart(payload: WebinarPayload): boolean {
+  return !!(payload.imageFile || payload.certificateTemplateFile || payload.certificate_layout)
+}
+
 function toRequestBody(payload: WebinarPayload): FormData | Record<string, unknown> {
-  if (!payload.imageFile) {
+  if (!needsMultipart(payload)) {
     const body: Record<string, unknown> = { ...payload }
     delete body.imageFile
+    delete body.certificateTemplateFile
+    if (payload.certificate_layout) {
+      body.certificate_layout = payload.certificate_layout
+    }
     return body
   }
   const fd = new FormData()
@@ -124,15 +144,20 @@ function toRequestBody(payload: WebinarPayload): FormData | Record<string, unkno
   append("is_published", payload.is_published)
   append("mode", payload.mode)
   append("starts_at", payload.starts_at)
-  append("ends_at", payload.ends_at)
   append("location", payload.location)
   append("online_url", payload.online_url)
   append("capacity", payload.capacity)
   append("registration_opens_at", payload.registration_opens_at)
   append("registration_closes_at", payload.registration_closes_at)
-  append("certificate_program", payload.certificate_program)
+  append("certificate_valid_until", payload.certificate_valid_until)
   append("auto_issue_certificate", payload.auto_issue_certificate)
-  fd.append("image", payload.imageFile)
+  if (payload.certificate_layout) {
+    fd.append("certificate_layout", JSON.stringify(payload.certificate_layout))
+  }
+  if (payload.imageFile) fd.append("image", payload.imageFile)
+  if (payload.certificateTemplateFile) {
+    fd.append("certificate_template_image", payload.certificateTemplateFile)
+  }
   return fd
 }
 

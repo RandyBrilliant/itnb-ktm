@@ -3,14 +3,8 @@ import { ArrowRight, Plus } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { AdminStatCard } from "@/components/admin/admin-stat-card"
 import { AdminQuickAction } from "@/components/admin/admin-quick-action"
+import { formatAppDate } from "@/lib/datetime"
 import { useAdminDashboardStats, useAdminRecentPosts } from "@/hooks/use-admin-dashboard-stats"
-
-function formatShortDate(iso?: string) {
-  if (!iso) return "—"
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return "—"
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-}
 
 function previewText(raw: string, max = 140) {
   const plain = raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
@@ -201,7 +195,7 @@ export function AdminDashboardPage() {
                           </span>
                         </td>
                         <td className="hidden py-4 text-[#5f5e5e] lg:table-cell">
-                          {formatShortDate(post.updated_at ?? post.published_at)}
+                          {formatAppDate(post.updated_at ?? post.published_at)}
                         </td>
                         <td className="px-6 py-4 text-right sm:px-8">
                           <Link

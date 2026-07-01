@@ -9,19 +9,10 @@ import {
   type WebinarItem,
 } from "@/api/webinars"
 import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
+import { formatAppDateTime } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
-function formatDateTime(value?: string) {
-  if (!value) return "—"
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
 
 export function AdminWebinarsPage() {
   const queryClient = useQueryClient()
@@ -130,7 +121,7 @@ export function AdminWebinarsPage() {
                       </p>
                     </td>
                     <td className="px-6 py-4 text-sm text-[#1a1c1c]">{webinar.mode_display || webinar.mode}</td>
-                    <td className="px-6 py-4 text-xs text-[#5f5e5e]">{formatDateTime(webinar.starts_at)}</td>
+                    <td className="px-6 py-4 text-xs text-[#5f5e5e]">{formatAppDateTime(webinar.starts_at)}</td>
                     <td className="px-6 py-4 text-sm text-[#1a1c1c]">
                       {webinar.registration_count}
                       {webinar.capacity ? ` / ${webinar.capacity}` : ""}

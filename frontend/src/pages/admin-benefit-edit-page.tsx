@@ -5,6 +5,7 @@ import { getBenefit, listBenefitCategories, updateBenefit } from "@/api/benefits
 import { ImageUploadField } from "@/components/ui/image-upload-field"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
 import { benefitCoverUrl } from "@/lib/benefit-cover"
+import { formatAppDateTime } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 import type { UserRole } from "@/types/auth"
@@ -13,7 +14,7 @@ const ELIGIBLE_ROLE_OPTIONS: UserRole[] = ["STUDENT", "LECTURER", "STAFF", "ALUM
 
 function formatDate(value?: string) {
   if (!value) return "—"
-  return new Date(value).toLocaleString()
+  return formatAppDateTime(value)
 }
 
 export function AdminBenefitEditPage() {

@@ -4,17 +4,13 @@ import { getPost } from "@/api/posts"
 import type { UserRole } from "@/types/auth"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { getRoleBasePath } from "@/lib/role-path"
+import { formatAppDateFull } from "@/lib/datetime"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { WebinarPostCta } from "@/components/content/webinar-post-cta"
 
 function formatDate(value?: string) {
   if (!value) return ""
-  return new Date(value).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  })
+  return formatAppDateFull(value)
 }
 
 export function NewsDetailPage({ role }: { role: UserRole }) {

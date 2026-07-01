@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { getRoleBasePath } from "@/lib/role-path"
 import { formatAcademicYearSubtitle } from "@/lib/academic-year"
+import { formatAppDate } from "@/lib/datetime"
 import type { PostItem } from "@/api/posts"
 
 const ROLE_TITLE: Record<UserRole, string> = {
@@ -19,11 +20,7 @@ const ROLE_TITLE: Record<UserRole, string> = {
 
 function formatAnnouncementDate(value?: string) {
   if (!value) return "Recently"
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
+  return formatAppDate(value)
 }
 
 function announcementExcerpt(body: string, max = 100) {

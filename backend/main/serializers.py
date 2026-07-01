@@ -12,13 +12,23 @@ from main.models import (
     BenefitCategory,
     Certificate,
     CertificateProgram,
-    default_certificate_layout,
     Event,
     Post,
     PostCategory,
     Webinar,
     WebinarRegistration,
     WebinarStatus,
+)
+from main.services.certificate_layout import normalize_certificate_layout
+from main.services.webinar_certificate import ensure_webinar_certificate_program
+from main.services.webinar_schedule import (
+    attendance_qr_available,
+    attendance_qr_opens_at,
+    check_in_opens_at,
+    check_in_window_open,
+    normalize_registration_closes,
+    normalize_registration_opens,
+    validate_registration_against_start,
 )
 
 ROLE_CHOICES = [choice.value for choice in UserRole]
@@ -32,9 +42,14 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 
 class CertificateProgramStubSerializer(serializers.ModelSerializer):
+    layout = serializers.SerializerMethodField()
+
     class Meta:
         model = CertificateProgram
-        fields = ["id", "title"]
+        fields = ["id", "title", "template_image", "valid_until", "issued_date", "layout"]
+
+    def get_layout(self, obj) -> dict:
+        return normalize_certificate_layout(obj.layout)
 
 
 class CertificateSerializer(serializers.ModelSerializer):
@@ -167,7 +182,7 @@ class CertificateProgramCreateSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({"layout": "Invalid JSON for layout."}) from exc
         if layout is not None and not isinstance(layout, dict):
             raise serializers.ValidationError({"layout": "layout must be a JSON object."})
-        attrs["layout"] = {**default_certificate_layout(), **(layout or {})}
+        attrs["layout"] = normalize_certificate_layout(layout)
         return attrs
 
 
@@ -289,6 +304,10 @@ class PostWebinarSummarySerializer(serializers.ModelSerializer):
     is_registration_open = serializers.BooleanField(read_only=True)
     is_full = serializers.BooleanField(read_only=True)
     certificate_program = CertificateProgramStubSerializer(read_only=True)
+    check_in_open = serializers.SerializerMethodField()
+    attendance_qr_available = serializers.SerializerMethodField()
+    check_in_opens_at = serializers.SerializerMethodField()
+    attendance_qr_opens_at = serializers.SerializerMethodField()
     my_registration = serializers.SerializerMethodField()
 
     class Meta:
@@ -298,16 +317,31 @@ class PostWebinarSummarySerializer(serializers.ModelSerializer):
             "mode",
             "mode_display",
             "starts_at",
-            "ends_at",
             "location",
             "online_url",
             "is_registration_open",
             "is_full",
             "auto_issue_certificate",
             "certificate_program",
+            "check_in_open",
+            "attendance_qr_available",
+            "check_in_opens_at",
+            "attendance_qr_opens_at",
             "my_registration",
         ]
         read_only_fields = fields
+
+    def get_check_in_open(self, obj):
+        return check_in_window_open(obj)
+
+    def get_attendance_qr_available(self, obj):
+        return attendance_qr_available(obj)
+
+    def get_check_in_opens_at(self, obj):
+        return check_in_opens_at(obj)
+
+    def get_attendance_qr_opens_at(self, obj):
+        return attendance_qr_opens_at(obj)
 
     def get_my_registration(self, obj):
         request = self.context.get("request")
@@ -442,6 +476,10 @@ class WebinarSerializer(serializers.ModelSerializer):
     is_full = serializers.BooleanField(read_only=True)
     registration_count = serializers.SerializerMethodField()
     attendee_count = serializers.SerializerMethodField()
+    check_in_open = serializers.SerializerMethodField()
+    attendance_qr_available = serializers.SerializerMethodField()
+    check_in_opens_at = serializers.SerializerMethodField()
+    attendance_qr_opens_at = serializers.SerializerMethodField()
     my_registration = serializers.SerializerMethodField()
 
     class Meta:
@@ -452,7 +490,6 @@ class WebinarSerializer(serializers.ModelSerializer):
             "mode",
             "mode_display",
             "starts_at",
-            "ends_at",
             "location",
             "online_url",
             "capacity",
@@ -466,11 +503,27 @@ class WebinarSerializer(serializers.ModelSerializer):
             "is_full",
             "registration_count",
             "attendee_count",
+            "check_in_open",
+            "attendance_qr_available",
+            "check_in_opens_at",
+            "attendance_qr_opens_at",
             "my_registration",
             "created_at",
             "updated_at",
         ]
         read_only_fields = fields
+
+    def get_check_in_open(self, obj):
+        return check_in_window_open(obj)
+
+    def get_attendance_qr_available(self, obj):
+        return attendance_qr_available(obj)
+
+    def get_check_in_opens_at(self, obj):
+        return check_in_opens_at(obj)
+
+    def get_attendance_qr_opens_at(self, obj):
+        return attendance_qr_opens_at(obj)
 
     def get_registration_count(self, obj):
         return obj.registrations.exclude(status="CANCELLED").count()
@@ -502,6 +555,9 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
     certificate_program = serializers.PrimaryKeyRelatedField(
         queryset=CertificateProgram.objects.all(), required=False, allow_null=True
     )
+    certificate_template_image = serializers.ImageField(required=False, allow_null=True, write_only=True)
+    certificate_valid_until = serializers.DateField(required=False, allow_null=True, write_only=True)
+    certificate_layout = serializers.JSONField(required=False, write_only=True)
 
     class Meta:
         model = Webinar
@@ -513,23 +569,105 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
             "is_published",
             "mode",
             "starts_at",
-            "ends_at",
             "location",
             "online_url",
             "capacity",
             "registration_opens_at",
             "registration_closes_at",
             "certificate_program",
+            "certificate_template_image",
+            "certificate_valid_until",
+            "certificate_layout",
             "auto_issue_certificate",
         ]
 
+    def _parse_certificate_layout(self, layout):
+        if layout is None:
+            return None
+        if isinstance(layout, str):
+            if not layout.strip():
+                return None
+            try:
+                layout = json.loads(layout)
+            except json.JSONDecodeError as exc:
+                raise serializers.ValidationError({"certificate_layout": "Invalid JSON for layout."}) from exc
+        if not isinstance(layout, dict):
+            raise serializers.ValidationError({"certificate_layout": "layout must be a JSON object."})
+        return normalize_certificate_layout(layout)
+
+    def _pop_certificate_fields(self, validated_data):
+        return {
+            "template_image": validated_data.pop("certificate_template_image", None),
+            "valid_until": validated_data.pop("certificate_valid_until", None),
+            "layout": self._parse_certificate_layout(validated_data.pop("certificate_layout", None)),
+        }
+
     def validate(self, attrs):
+        opens = attrs.get(
+            "registration_opens_at",
+            getattr(self.instance, "registration_opens_at", None),
+        )
+        closes = attrs.get(
+            "registration_closes_at",
+            getattr(self.instance, "registration_closes_at", None),
+        )
+
+        if "registration_opens_at" in attrs and attrs["registration_opens_at"] is not None:
+            attrs["registration_opens_at"] = normalize_registration_opens(attrs["registration_opens_at"])
+            opens = attrs["registration_opens_at"]
+        if "registration_closes_at" in attrs and attrs["registration_closes_at"] is not None:
+            attrs["registration_closes_at"] = normalize_registration_closes(attrs["registration_closes_at"])
+            closes = attrs["registration_closes_at"]
+
+        if opens and closes and closes < opens:
+            raise serializers.ValidationError(
+                {"registration_closes_at": "Registration end date must be on or after the start date."}
+            )
+
         starts_at = attrs.get("starts_at", getattr(self.instance, "starts_at", None))
-        ends_at = attrs.get("ends_at", getattr(self.instance, "ends_at", None))
-        if starts_at and ends_at and ends_at < starts_at:
-            raise serializers.ValidationError({"ends_at": "End time must be after the start time."})
+        if starts_at:
+            reg_errors = validate_registration_against_start(
+                starts_at=starts_at,
+                registration_opens_at=opens,
+                registration_closes_at=closes,
+            )
+            if reg_errors:
+                raise serializers.ValidationError(reg_errors)
+
         if self.instance is None and not attrs.get("title"):
             raise serializers.ValidationError({"title": "This field is required."})
+        if self.instance is None and not attrs.get("starts_at"):
+            raise serializers.ValidationError({"starts_at": "This field is required."})
+
+        if "certificate_layout" in attrs:
+            attrs["certificate_layout"] = self._parse_certificate_layout(attrs.get("certificate_layout"))
+
+        auto_issue = attrs.get(
+            "auto_issue_certificate",
+            getattr(self.instance, "auto_issue_certificate", True),
+        )
+        cert_template = attrs.get("certificate_template_image")
+        has_program = bool(
+            attrs.get("certificate_program")
+            or (self.instance and self.instance.certificate_program_id)
+        )
+        if auto_issue and not cert_template and not has_program:
+            raise serializers.ValidationError(
+                {
+                    "certificate_template_image": (
+                        "Upload a certificate template image when auto-issue is enabled."
+                    )
+                }
+            )
+        if cert_template and not auto_issue:
+            raise serializers.ValidationError(
+                {
+                    "auto_issue_certificate": (
+                        "Enable auto-issue when uploading a certificate template."
+                    )
+                }
+            )
+
         return attrs
 
     def _pop_post_fields(self, validated):
@@ -542,6 +680,7 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context["request"]
         is_published = validated_data.pop("is_published", False)
+        cert_fields = self._pop_certificate_fields(validated_data)
         post_fields = self._pop_post_fields(validated_data)
         post_fields.setdefault("body", "")
 
@@ -552,14 +691,26 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
             published_at=timezone.now() if is_published else None,
             **post_fields,
         )
-        return Webinar.objects.create(
+        webinar = Webinar.objects.create(
             post=post,
             status=WebinarStatus.PUBLISHED if is_published else WebinarStatus.DRAFT,
             **validated_data,
         )
 
+        if cert_fields["template_image"] is not None:
+            ensure_webinar_certificate_program(
+                webinar=webinar,
+                issued_by=request.user,
+                template_image=cert_fields["template_image"],
+                valid_until=cert_fields["valid_until"],
+                layout=cert_fields["layout"],
+                title=post.title,
+            )
+        return webinar
+
     def update(self, instance, validated_data):
         is_published = validated_data.pop("is_published", None)
+        cert_fields = self._pop_certificate_fields(validated_data)
         post_fields = self._pop_post_fields(validated_data)
 
         post = instance.post
@@ -581,4 +732,25 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
         for key, value in validated_data.items():
             setattr(instance, key, value)
         instance.save()
+
+        if (
+            cert_fields["template_image"] is not None
+            or cert_fields["valid_until"] is not None
+            or (
+                cert_fields["layout"] is not None
+                and (
+                    instance.certificate_program_id
+                    or cert_fields["template_image"] is not None
+                )
+            )
+        ):
+            ensure_webinar_certificate_program(
+                webinar=instance,
+                issued_by=self.context["request"].user,
+                template_image=cert_fields["template_image"],
+                valid_until=cert_fields["valid_until"],
+                layout=cert_fields["layout"],
+                title=post.title,
+            )
+
         return instance

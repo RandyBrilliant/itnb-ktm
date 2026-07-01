@@ -60,6 +60,12 @@ def process_certificate_program_batch(program_id: int) -> None:
         logger.error("CertificateProgram %s not found", program_id)
         return
 
+    if not program.recipients_file:
+        program.batch_status = CertificateProgramBatchStatus.COMPLETED
+        program.batch_summary = {"source": "webinar", "matched": 0, "total_rows": 0}
+        program.save(update_fields=["batch_status", "batch_summary", "updated_at"])
+        return
+
     try:
         program.batch_status = CertificateProgramBatchStatus.PROCESSING
         program.batch_summary = {}

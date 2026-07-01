@@ -38,6 +38,7 @@ urlpatterns = [
     path("auth/request-email-verification/", views.RequestEmailVerificationView.as_view(), name="auth-request-email-verification"),
     path("auth/request-email-change/", views.RequestEmailChangeView.as_view(), name="auth-request-email-change"),
     path("auth/verify-email/", views.VerifyEmailView.as_view(), name="auth-verify-email"),
+    path("cards/verify/<str:card_number>/", views.VerifyCardView.as_view(), name="card-verify"),
     path("health/", views.HealthCheckView.as_view(), name="health"),
     
     # Router paths

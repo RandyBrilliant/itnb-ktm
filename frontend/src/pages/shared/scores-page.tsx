@@ -4,6 +4,7 @@ import type { ScoreRow } from "@/api/academic"
 import { formatGpa, useMyAcademicQuery } from "@/hooks/use-academic-query"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { normalizeSemester, semesterDisplayLabel, sortSemesters } from "@/lib/semester"
+import { formatAppDateTime } from "@/lib/datetime"
 import type { UserRole } from "@/types/auth"
 
 type SemesterFilter = "all" | number
@@ -53,15 +54,7 @@ export function ScoresPage({ role }: { role: UserRole }) {
   const summary = data?.summary
   const scores = data?.scores ?? []
   const isStale = data?.stale === true
-  const syncedAtLabel = data?.synced_at
-    ? new Date(data.synced_at).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : null
+  const syncedAtLabel = data?.synced_at ? formatAppDateTime(data.synced_at) : null
 
   const groupedScores = useMemo(() => groupBySemester(scores), [scores])
   const semesterOptions = useMemo(() => sortSemesters(groupedScores.keys()), [groupedScores])

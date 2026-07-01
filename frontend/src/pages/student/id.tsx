@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query"
 import { getMyCard } from "@/api/cards"
 import { env } from "@/lib/env"
 import { resolveMediaUrl, resolvePublicAssetUrl } from "@/lib/media-url"
+import { formatAppMonthYear } from "@/lib/datetime"
 import { formatBirthPlaceDate } from "@/lib/format-birth"
 
 const FALLBACK = {
@@ -56,12 +57,7 @@ export function StudentIDPage() {
     major: me?.department || FALLBACK.major,
     birthPlaceDate: formatBirthPlaceDate(me?.place_of_birth, me?.date_of_birth) || FALLBACK.birthPlaceDate,
     degree: "Bachelor Degree",
-    validThru: card?.valid_until
-      ? new Date(card.valid_until).toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        })
-      : FALLBACK.validThru,
+    validThru: card?.valid_until ? formatAppMonthYear(card.valid_until) : FALLBACK.validThru,
     photoUrl:
       resolveMediaUrl(me?.photo) ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(

@@ -13,6 +13,7 @@ from reportlab.pdfgen import canvas
 
 from main.models import Certificate
 from main.services.certificate_generation import generate_certificate_pdf
+from main.services.certificate_layout import normalize_certificate_layout
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,6 @@ def _resolve_font_path() -> Path | None:
     base = Path(settings.BASE_DIR) / "main" / "fonts" / "DejaVuSans.ttf"
     if base.is_file():
         return base
-    # Common OS paths (production Linux / Windows dev)
     candidates = [
         Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
         Path("/usr/share/fonts/TTF/DejaVuSans.ttf"),
@@ -39,24 +39,41 @@ def _resolve_font_path() -> Path | None:
     return None
 
 
-def _layout_dict(program) -> dict:
-    layout = program.layout or {}
-    defaults = {
-        "name_y_ratio": 0.42,
-        "id_y_ratio": 0.48,
-        "name_font_ratio": 0.038,
-        "id_font_ratio": 0.024,
-        "text_color": "#1a1a1a",
-    }
-    out = {**defaults, **layout}
-    return out
-
-
 def _hex_to_rgb(color: str) -> tuple[int, int, int]:
     c = (color or "#000000").strip().lstrip("#")
     if len(c) == 6:
         return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
     return 26, 26, 26
+
+
+def _draw_field(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    field: dict,
+    *,
+    width: int,
+    height: int,
+    font,
+    fill: tuple[int, int, int, int],
+) -> None:
+    if not text:
+        return
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    anchor_x = width * float(field["x_ratio"])
+    anchor_y = height * float(field["y_ratio"]) - th / 2
+    align = field.get("align", "center")
+
+    if align == "right":
+        x = anchor_x - tw
+    elif align == "left":
+        x = anchor_x
+    else:
+        x = anchor_x - tw / 2
+
+    draw.text((x, anchor_y), text, fill=fill, font=font)
 
 
 def render_template_certificate_pdf(certificate: Certificate) -> bytes:
@@ -66,7 +83,7 @@ def render_template_certificate_pdf(certificate: Certificate) -> bytes:
         return generate_certificate_pdf(certificate)
 
     template_path = certificate.program.template_image.path
-    layout = _layout_dict(program)
+    layout = normalize_certificate_layout(program.layout)
     font_path = _resolve_font_path()
 
     try:
@@ -81,8 +98,8 @@ def render_template_certificate_pdf(certificate: Certificate) -> bytes:
     name = (certificate.recipient_name or certificate.user.full_name or certificate.user.email or "").strip()
     rid = (certificate.recipient_id_display or "").strip()
 
-    name_font_size = max(12, int(h * float(layout["name_font_ratio"])))
-    id_font_size = max(10, int(h * float(layout["id_font_ratio"])))
+    name_font_size = max(12, int(h * float(layout["name"]["font_ratio"])))
+    id_font_size = max(10, int(h * float(layout["id"]["font_ratio"])))
 
     if font_path:
         try:
@@ -96,20 +113,10 @@ def render_template_certificate_pdf(certificate: Certificate) -> bytes:
         font_name = ImageFont.load_default()
         font_id = ImageFont.load_default()
 
-    fill = _hex_to_rgb(str(layout["text_color"]))
+    fill = _hex_to_rgb(str(layout["text_color"])) + (255,)
 
-    def draw_centered(text: str, y_ratio: float, font) -> None:
-        if not text:
-            return
-        bbox = draw.textbbox((0, 0), text, font=font)
-        tw = bbox[2] - bbox[0]
-        th = bbox[3] - bbox[1]
-        x = (w - tw) / 2
-        y = h * float(y_ratio) - th / 2
-        draw.text((x, y), text, fill=fill + (255,), font=font)
-
-    draw_centered(name, float(layout["name_y_ratio"]), font_name)
-    draw_centered(rid, float(layout["id_y_ratio"]), font_id)
+    _draw_field(draw, name, layout["name"], width=w, height=h, font=font_name, fill=fill)
+    _draw_field(draw, rid, layout["id"], width=w, height=h, font=font_id, fill=fill)
 
     rgb = img.convert("RGB")
     png_buf = BytesIO()

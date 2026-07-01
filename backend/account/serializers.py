@@ -10,6 +10,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from .services.card_validity import effective_card_valid_until
 from .models import (
     CustomUser,
     UserRole,
@@ -537,6 +538,10 @@ class DigitalCardSerializer(serializers.ModelSerializer):
         source="get_card_type_display",
         read_only=True,
     )
+    valid_until = serializers.SerializerMethodField()
+
+    def get_valid_until(self, obj: DigitalCard) -> str:
+        return effective_card_valid_until(obj).isoformat()
 
     class Meta:
         model = DigitalCard

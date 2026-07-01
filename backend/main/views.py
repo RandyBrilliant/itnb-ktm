@@ -51,7 +51,16 @@ from main.services.webinar_attendance import (
     seconds_until_next_window,
     verify_attendance_token,
 )
-from main.services.webinar_export import build_webinar_participants_workbook
+from main.services.webinar_schedule import (
+    attendance_qr_available,
+    attendance_qr_opens_at,
+    check_in_opens_at,
+    check_in_window_open,
+    normalize_registration_closes,
+    normalize_registration_opens,
+    validate_registration_against_start,
+    webinar_session_contains,
+)
 from main.serializers import (
     BenefitCategorySerializer,
     BenefitSerializer,
@@ -636,6 +645,20 @@ class WebinarViewSet(viewsets.ModelViewSet):
         webinar = self.get_object()
         now = timezone.now()
 
+        if phase == "in" and not check_in_window_open(webinar, now):
+            return Response(
+                error_response(
+                    detail="Check-in opens 1 hour before the webinar starts and closes at the end of the session day."
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if phase == "out" and not webinar_session_contains(webinar, now):
+            return Response(
+                error_response(detail="Check-out is only available during the webinar session."),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         raw = str(request.data.get("token") or "").strip()
         if ":" in raw:  # accept a scanned "WEBINAR:<id>:<phase>:<token>" payload
             raw = raw.split(":")[-1].strip()
@@ -643,10 +666,20 @@ class WebinarViewSet(viewsets.ModelViewSet):
         valid = False
         method = ""
         if raw:
+            window_ok = (
+                check_in_window_open(webinar, now)
+                if phase == "in"
+                else webinar_session_contains(webinar, now)
+            )
+            if not window_ok:
+                return Response(
+                    error_response(detail="Invalid or expired attendance code."),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             valid = verify_attendance_token(webinar.attendance_secret, phase, raw)
             method = "TOKEN"
         elif webinar.mode in (WebinarMode.ONLINE, WebinarMode.HYBRID):
-            valid = webinar.starts_at <= now <= webinar.ends_at
+            valid = check_in_window_open(webinar, now) if phase == "in" else webinar_session_contains(webinar, now)
             method = "ONLINE"
 
         if not valid:
@@ -699,6 +732,20 @@ class WebinarViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], url_path="attendance-token", permission_classes=[CanPostNews])
     def attendance_token(self, request, pk=None):
         webinar = self.get_object()
+        now = timezone.now()
+
+        if not attendance_qr_available(webinar, now):
+            opens = attendance_qr_opens_at(webinar)
+            return Response(
+                error_response(
+                    detail=(
+                        "Attendance QR is available from 30 minutes before the webinar starts "
+                        f"({timezone.localtime(opens).strftime('%d %b %Y, %H:%M')} WIB)."
+                    ),
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         phase = request.query_params.get("phase", "in")
         if phase not in VALID_PHASES:
             phase = "in"

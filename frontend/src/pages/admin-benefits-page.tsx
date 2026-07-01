@@ -9,12 +9,13 @@ import {
   type Benefit,
 } from "@/api/benefits"
 import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
+import { formatAppDateTime } from "@/lib/datetime"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
 function formatDate(value?: string) {
   if (!value) return "—"
-  return new Date(value).toLocaleString()
+  return formatAppDateTime(value)
 }
 
 export function AdminBenefitsPage() {

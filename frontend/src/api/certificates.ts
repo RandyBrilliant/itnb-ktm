@@ -2,6 +2,8 @@ import { api } from "@/lib/api"
 import type { ApiSuccessResponse } from "@/types/api"
 import { unwrapApiData } from "@/lib/api-response"
 
+import type { CertificateLayout } from "@/lib/certificate-layout"
+
 export interface CertificateUserSummary {
   id: number
   email: string
@@ -22,7 +24,12 @@ export interface CertificateItem {
   pdf_file?: string | null
   recipient_name?: string
   recipient_id_display?: string
-  program?: { id: number; title: string } | null
+  program?: {
+    id: number
+    title: string
+    template_image?: string | null
+    layout?: CertificateLayout | Record<string, unknown>
+  } | null
   user?: CertificateUserSummary
   is_suspended?: boolean
 }
