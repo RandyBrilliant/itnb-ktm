@@ -59,6 +59,9 @@ const AdminCertificateProgramCreatePage = lazy(() =>
 const AdminCertificateProgramDetailPage = lazy(() =>
   import("@/pages/admin-certificate-program-detail-page").then((m) => ({ default: m.AdminCertificateProgramDetailPage }))
 )
+const StudentEmailSetupPage = lazy(() =>
+  import("@/pages/student-email-setup-page").then((m) => ({ default: m.StudentEmailSetupPage }))
+)
 const StudentDashboard = lazy(() => import("@/pages/student/dashboard").then((m) => ({ default: m.StudentDashboard })))
 const StaffDashboardPage = lazy(() => import("@/pages/staff-dashboard-page").then((m) => ({ default: m.StaffDashboardPage })))
 const LecturerDashboardPage = lazy(() => import("@/pages/lecturer-dashboard-page").then((m) => ({ default: m.LecturerDashboardPage })))
@@ -318,6 +321,14 @@ function App() {
             
             {/* Student Routes */}
             <Route
+              path="/student/setup-email"
+              element={
+                <ProtectedRoute allowedRoles={["STUDENT"]}>
+                  <StudentEmailSetupPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/student/*"
               element={
                 <ProtectedRoute allowedRoles={["STUDENT"]}>
@@ -423,6 +434,14 @@ function App() {
             />
             
             {/* Alumni Routes */}
+            <Route
+              path="/alumni/setup-email"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <StudentEmailSetupPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/alumni/*"
               element={

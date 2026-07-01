@@ -26,7 +26,7 @@ export function AuthBrandPanel() {
             EST
           </p>
           <p className="font-[var(--font-heading)] text-4xl font-extrabold text-[#1a1c1c]">
-            1998
+            2006
           </p>
         </div>
       </div>

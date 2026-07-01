@@ -169,7 +169,7 @@ export function AdminUsersPage() {
             Import student records
           </p>
           <p className="mt-1 text-sm text-[#5f5e5e]">
-            Upload an Excel (.xlsx) file using the template. Required: Email, Full name, and Institutional ID.
+            Upload an Excel (.xlsx) file using the template. Required: Full name and Institutional ID. Email is optional.
             Optional: Department (Management, Information Systems, Accounting, International Trade,
             Entrepreneurship, Master in Management, Hospitality Management), Place of birth, Date of birth
             (YYYY-MM-DD), Record type (STUDENT or ALUMNI),

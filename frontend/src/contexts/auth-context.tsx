@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { login as loginApi, logout as logoutApi } from "@/api/auth"
 import { useMeQuery, authKeys } from "@/hooks/use-auth-query"
 import type { User } from "@/types/auth"
-import { getDashboardRouteForRole } from "@/types/auth"
+import { getPostLoginRoute } from "@/lib/email-setup"
 
 interface AuthState {
   user: User | null
@@ -85,8 +85,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
 
         if (options.redirect !== false) {
-          const route = getDashboardRouteForRole(loggedInUser.role)
-          navigate(route)
+          navigate(getPostLoginRoute(loggedInUser))
         }
         return loggedInUser
       } catch (error) {

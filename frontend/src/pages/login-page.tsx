@@ -6,7 +6,7 @@ import { getUserFriendlyError } from "@/lib/error-message"
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel"
 import { LoginCard } from "@/components/auth/login-card"
 import { AnimatedPage } from "@/components/animation/animated-page"
-import { getDashboardRouteForRole } from "@/types/auth"
+import { getPostLoginRoute } from "@/lib/email-setup"
 
 /**
  * Login page for admin/staff/lecturer
@@ -37,7 +37,7 @@ export function LoginPage() {
         return
       }
       toast.success("Login successful", "Redirecting to dashboard...")
-      navigate(getDashboardRouteForRole(user.role), { replace: true })
+      navigate(getPostLoginRoute(user), { replace: true })
     } catch (err: unknown) {
       const errorMessage = getUserFriendlyError(err, "login")
       setPassword("")

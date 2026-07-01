@@ -21,6 +21,7 @@ from .models import (
 )
 from .student_departments import resolve_student_department
 from .services.image_processing import process_uploaded_avatar
+from .placeholder_email import is_placeholder_email, user_requires_email_setup
 
 
 def _compress_photo(value):
@@ -84,6 +85,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     staff_profile = serializers.SerializerMethodField()
     lecturer_profile = serializers.SerializerMethodField()
     pending_email_change = serializers.SerializerMethodField()
+    requires_email_setup = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -102,6 +104,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "alumni_year",
             "email_verified",
             "pending_email_change",
+            "requires_email_setup",
             "is_active",
             "is_staff",
             "is_superuser",
@@ -166,6 +169,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     def get_pending_email_change(self, obj):
         return EmailVerificationCode.get_pending_email_change(obj)
+
+    def get_requires_email_setup(self, obj):
+        return user_requires_email_setup(obj)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -355,6 +361,8 @@ class RequestEmailChangeSerializer(serializers.Serializer):
         user = self.context["request"].user
         if email == user.email.lower():
             raise serializers.ValidationError("This is already your current email address.")
+        if is_placeholder_email(email):
+            raise serializers.ValidationError("Enter your personal email address, not a system placeholder.")
         if CustomUser.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError("This email address is already in use.")
         return email

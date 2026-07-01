@@ -1,5 +1,5 @@
 #!/bin/bash
-# First-time Let's Encrypt SSL for portal.itnb.ac.id (or SSL_DOMAIN from .env).
+# First-time Let's Encrypt SSL for data.itnb.ac.id (or SSL_DOMAIN from .env).
 # Installs certbot, obtains the certificate, enables HTTPS in nginx, and schedules auto-renewal.
 #
 # Usage:
@@ -38,7 +38,7 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
     set +a
 fi
 
-DOMAIN="${1:-${SSL_DOMAIN:-portal.itnb.ac.id}}"
+DOMAIN="${1:-${SSL_DOMAIN:-data.itnb.ac.id}}"
 EMAIL="${2:-${SSL_EMAIL:-}}"
 
 if [[ -z "$EMAIL" ]]; then
@@ -204,4 +204,4 @@ echo "  Domain:  https://${DOMAIN}"
 echo "  Renew:   ${SCRIPT_DIR}/ssl-renew.sh"
 echo "  Cron:    daily at 03:00 (certbot renew + nginx reload)"
 echo ""
-echo "Set on Vercel: VITE_API_URL=https://${DOMAIN}"
+echo "Set on Vercel (portal.itnb.ac.id): VITE_API_URL=https://${DOMAIN}"

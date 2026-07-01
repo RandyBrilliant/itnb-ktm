@@ -66,6 +66,7 @@ from .api_responses import (
 from .exceptions import DeleteNotAllowed
 from .services.qr_generation import generate_qr_code, save_qr_to_bytes
 from .services.email_verification import create_and_send_verification_code
+from .placeholder_email import user_requires_email_setup
 from .services.student_import import build_student_import_workbook, parse_student_import_xlsx
 from .services.student_photo_import import extract_photo_entries, normalize_avatar
 from .services.card_generation import (
@@ -475,6 +476,14 @@ class RequestEmailVerificationView(APIView):
 
     def post(self, request):
         user = request.user
+        if user_requires_email_setup(user):
+            return Response(
+                error_response(
+                    detail="Add and verify your personal email address to continue.",
+                    code=ApiCode.VALIDATION_ERROR,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if user.email_verified:
             return Response(
                 error_response(

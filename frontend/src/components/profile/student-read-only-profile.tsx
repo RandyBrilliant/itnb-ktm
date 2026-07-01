@@ -13,7 +13,7 @@ import { authKeys } from "@/hooks/use-auth-query"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { formatBirthDate } from "@/lib/format-birth"
-import { toast } from "@/lib/toast"
+import { formatUserEmailLabel, requiresEmailSetup } from "@/lib/email-setup"
 
 type EmailMode = "view" | "verify" | "change" | "change-verify"
 
@@ -220,18 +220,18 @@ export function StudentReadOnlyProfile({ user, changePasswordHref }: StudentRead
               </p>
             </div>
             <StatusIndicator
-              positive={user.email_verified}
+              positive={user.email_verified && !requiresEmailSetup(user)}
               positiveLabel="Verified"
-              negativeLabel="Not verified"
+              negativeLabel={requiresEmailSetup(user) ? "Setup required" : "Not verified"}
             />
           </div>
 
           <div className="mt-4 rounded-xl border border-[#ececec] bg-[#fafafa] p-4 sm:p-5">
             {emailMode === "view" ? (
               <div className="space-y-4">
-                <ReadOnlyField label="Current Email" value={user.email} />
+                <ReadOnlyField label="Current Email" value={formatUserEmailLabel(user)} />
                 <div className="flex flex-wrap items-center gap-3 pt-1">
-                  {!user.email_verified ? (
+                  {!user.email_verified && !requiresEmailSetup(user) ? (
                     <button
                       type="button"
                       onClick={handleRequestVerification}

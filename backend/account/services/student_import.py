@@ -7,6 +7,9 @@ import re
 from datetime import date, datetime
 from typing import Any
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -15,6 +18,7 @@ from account.student_departments import (
     format_student_department_choices,
     resolve_student_department,
 )
+from account.placeholder_email import synthetic_student_email
 
 ROLE_STUDENT = "STUDENT"
 ROLE_ALUMNI = "ALUMNI"
@@ -67,7 +71,7 @@ IMPORT_HEADERS = [
 ]
 
 SAMPLE_STUDENT_ROW = [
-    "student@example.com",
+    "",
     "Budi Santoso",
     "2021001234",
     "Information Systems",
@@ -196,11 +200,15 @@ def build_student_import_workbook() -> io.BytesIO:
     instruction_rows = [
         ["Student record bulk import"],
         [""],
-        ["1. Fill in the Students sheet (delete the two sample rows before importing)."],
-        ["2. Required columns: Email, Full name, Institutional ID (NIM)."],
+        ["1. Fill in the Students sheet (delete the sample rows before importing)."],
+        ["2. Required columns: Full name and Institutional ID (NIM)."],
         [
-            "3. Optional columns: Department, Place of birth, Date of birth (YYYY-MM-DD), "
+            "3. Optional columns: Email, Department, Place of birth, Date of birth (YYYY-MM-DD), "
             "Record type (STUDENT or ALUMNI), Graduation year, Password."
+        ],
+        [
+            "   If Email is left empty, a placeholder address is created and students sign in "
+            "with their Institutional ID."
         ],
         [f"   Allowed departments: {format_student_department_choices()}."],
         ["4. Leave Password empty to use each row's Institutional ID as the initial password."],
@@ -273,17 +281,14 @@ def parse_student_import_xlsx(
             elif key in PWD_HEADERS:
                 header_map["password"] = ci
 
-        if (
-            "email" not in header_map
-            or "full_name" not in header_map
-            or "institutional_id" not in header_map
-        ):
+        if "full_name" not in header_map or "institutional_id" not in header_map:
             return [], [
-                "Missing required columns. The first row must include headers for Email, Full name, "
-                "and Institutional ID (e.g. columns labeled Email, Full name, and Institutional ID)."
+                "Missing required columns. The first row must include headers for Full name "
+                "and Institutional ID (e.g. columns labeled Full name and Institutional ID)."
             ]
 
         seen_emails: set[str] = set()
+        seen_institutional_ids: set[str] = set()
 
         def col(row: tuple[Any, ...], name: str) -> str:
             if name not in header_map:
@@ -301,17 +306,37 @@ def parse_student_import_xlsx(
                 continue
             email = col(row, "email")
             full_name = col(row, "full_name")
-            if not email and not full_name:
-                continue
-            if not email:
-                errors.append(f"Row {ri}: missing email.")
+            inst_raw = col(row, "institutional_id")
+            if not full_name and not inst_raw:
                 continue
             if not full_name:
                 errors.append(f"Row {ri}: missing full name.")
                 continue
-            el = email.strip().lower()
+
+            inst = inst_raw.strip()
+            if not inst:
+                errors.append(f"Row {ri}: missing institutional ID.")
+                continue
+
+            inst_key = inst.lower()
+            if inst_key in seen_institutional_ids:
+                errors.append(f"Row {ri}: duplicate institutional ID in file ({inst}).")
+                continue
+            seen_institutional_ids.add(inst_key)
+
+            email_provided = bool(email.strip())
+            if email_provided:
+                try:
+                    validate_email(email.strip())
+                except ValidationError:
+                    errors.append(f"Row {ri}: invalid email ({email.strip()}).")
+                    continue
+
+            resolved_email = email.strip() if email_provided else synthetic_student_email(inst)
+            el = resolved_email.strip().lower()
             if el in seen_emails:
-                errors.append(f"Row {ri}: duplicate email in file ({email}).")
+                label = email if email_provided else f"(generated for {inst})"
+                errors.append(f"Row {ri}: duplicate email in file ({label}).")
                 continue
             seen_emails.add(el)
 
@@ -345,12 +370,6 @@ def parse_student_import_xlsx(
             if role == ROLE_STUDENT:
                 alumni_year = None
 
-            inst_raw = col(row, "institutional_id")
-            if not inst_raw:
-                errors.append(f"Row {ri}: missing institutional ID.")
-                continue
-            inst = inst_raw.strip()
-
             department_raw = col(row, "department") or ""
             department, dept_error = resolve_student_department(department_raw)
             if dept_error:
@@ -360,7 +379,7 @@ def parse_student_import_xlsx(
             rows_out.append(
                 {
                     "row": ri,
-                    "email": email.strip(),
+                    "email": resolved_email,
                     "full_name": full_name.strip(),
                     "institutional_id": inst,
                     "department": department,

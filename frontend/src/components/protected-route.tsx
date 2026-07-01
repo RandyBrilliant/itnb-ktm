@@ -1,7 +1,8 @@
-import { Navigate } from "react-router-dom"
+import { Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 import type { UserRole } from "@/types/auth"
 import { getDashboardRouteForRole } from "@/types/auth"
+import { getEmailSetupRoute, requiresEmailSetup } from "@/lib/email-setup"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -18,6 +19,7 @@ export function ProtectedRoute({
   allowedRoles,
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth()
+  const location = useLocation()
   const hasAccessToken = !!localStorage.getItem("access_token")
 
   if (isLoading) {
@@ -36,6 +38,17 @@ export function ProtectedRoute({
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return <Navigate to={getDashboardRouteForRole(user.role)} replace />
+  }
+
+  const emailSetupRoute = user ? getEmailSetupRoute(user.role) : null
+  const onEmailSetupRoute = emailSetupRoute ? location.pathname === emailSetupRoute : false
+
+  if (user && emailSetupRoute && requiresEmailSetup(user) && !onEmailSetupRoute) {
+    return <Navigate to={emailSetupRoute} replace />
+  }
+
+  if (user && emailSetupRoute && onEmailSetupRoute && !requiresEmailSetup(user)) {
     return <Navigate to={getDashboardRouteForRole(user.role)} replace />
   }
 
