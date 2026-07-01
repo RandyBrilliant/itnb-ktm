@@ -5,6 +5,7 @@ import type { UserRole } from "@/types/auth"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { getRoleBasePath } from "@/lib/role-path"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
+import { WebinarPostCta } from "@/components/content/webinar-post-cta"
 
 function formatDate(value?: string) {
   if (!value) return ""
@@ -69,6 +70,9 @@ export function NewsDetailPage({ role }: { role: UserRole }) {
               <div className="border-t border-[#f0f0f0] pt-6">
                 <p className="whitespace-pre-line text-base leading-relaxed text-[#3b3b3b]">{data.body}</p>
               </div>
+              {data.webinar ? (
+                <WebinarPostCta webinar={data.webinar} role={role} postId={data.id} />
+              ) : null}
             </div>
           </>
         ) : (

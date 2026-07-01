@@ -380,9 +380,10 @@ class PostViewSet(viewsets.ModelViewSet):
     ordering = ["-published_at", "-created_at"]
 
     def get_queryset(self):
+        base = Post.objects.select_related("author", "webinar", "webinar__certificate_program")
         if self.request.user.role in (UserRole.STAFF, UserRole.ADMIN):
-            return Post.objects.select_related("author").all()
-        return Post.objects.select_related("author").filter(is_published=True)
+            return base.all()
+        return base.filter(is_published=True)
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:

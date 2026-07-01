@@ -1,9 +1,25 @@
 import { api } from "@/lib/api"
 import type { ApiSuccessResponse } from "@/types/api"
 import type { PaginatedResponse } from "@/api/certificates"
+import type { WebinarMyRegistration } from "@/api/webinars"
 import { unwrapApiData } from "@/lib/api-response"
 
 export type PostCategory = "ANNOUNCEMENT" | "NEWS" | "EVENT" | "ACADEMIC"
+
+export interface PostWebinarSummary {
+  id: number
+  mode: string
+  mode_display?: string
+  starts_at: string
+  ends_at: string
+  location?: string
+  online_url?: string
+  is_registration_open: boolean
+  is_full: boolean
+  auto_issue_certificate: boolean
+  certificate_program?: { id: number; title: string } | null
+  my_registration: WebinarMyRegistration | null
+}
 
 export interface PostItem {
   id: number
@@ -15,6 +31,7 @@ export interface PostItem {
   image_url?: string | null
   is_published: boolean
   published_at?: string
+  webinar?: PostWebinarSummary | null
   created_at?: string
   updated_at?: string
   author?: {

@@ -282,9 +282,56 @@ class BenefitWriteSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class PostWebinarSummarySerializer(serializers.ModelSerializer):
+    """Minimal webinar info embedded on a news/announcement post."""
+
+    mode_display = serializers.CharField(source="get_mode_display", read_only=True)
+    is_registration_open = serializers.BooleanField(read_only=True)
+    is_full = serializers.BooleanField(read_only=True)
+    certificate_program = CertificateProgramStubSerializer(read_only=True)
+    my_registration = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Webinar
+        fields = [
+            "id",
+            "mode",
+            "mode_display",
+            "starts_at",
+            "ends_at",
+            "location",
+            "online_url",
+            "is_registration_open",
+            "is_full",
+            "auto_issue_certificate",
+            "certificate_program",
+            "my_registration",
+        ]
+        read_only_fields = fields
+
+    def get_my_registration(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user or not request.user.is_authenticated:
+            return None
+        reg = obj.registrations.filter(user=request.user).first()
+        if not reg:
+            return None
+        return {
+            "id": reg.id,
+            "status": reg.status,
+            "status_display": reg.get_status_display(),
+            "registered_at": reg.registered_at,
+            "checked_in_at": reg.checked_in_at,
+            "checked_out_at": reg.checked_out_at,
+            "attended": reg.attended,
+            "certificate_id": reg.certificate_id,
+        }
+
+
 class PostSerializer(serializers.ModelSerializer):
     author = UserSummarySerializer(read_only=True)
     category_display = serializers.CharField(source="get_category_display", read_only=True)
+    webinar = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -299,10 +346,18 @@ class PostSerializer(serializers.ModelSerializer):
             "image_url",
             "is_published",
             "published_at",
+            "webinar",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "author", "published_at", "created_at", "updated_at"]
+        read_only_fields = ["id", "author", "published_at", "webinar", "created_at", "updated_at"]
+
+    def get_webinar(self, obj):
+        try:
+            webinar = obj.webinar
+        except Webinar.DoesNotExist:
+            return None
+        return PostWebinarSummarySerializer(webinar, context=self.context).data
 
 
 class PostCreateUpdateSerializer(serializers.ModelSerializer):
