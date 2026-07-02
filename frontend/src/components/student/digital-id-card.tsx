@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react"
+import type { CSSProperties, ReactNode, Ref } from "react"
 
 /** Bundled blank template — no printed field labels (avoids ghosting with HTML labels). */
 export const CARD_BACKGROUND_URL = "/img/card-bg.jpg"
@@ -32,6 +32,8 @@ interface DigitalIdCardProps {
   frontBackgroundFailed?: boolean
   backBackgroundFailed?: boolean
   photoFailed?: boolean
+  frontCaptureRef?: Ref<HTMLDivElement>
+  backCaptureRef?: Ref<HTMLDivElement>
 }
 
 /** White content band — right of the printed sidebar, below the logo. */
@@ -76,6 +78,7 @@ function CardFace({
   children,
   faceTransform = "[transform:translateZ(1px)]",
   imageFit = "fill",
+  captureRef,
 }: {
   backgroundUrl: string
   backgroundFailed?: boolean
@@ -83,12 +86,16 @@ function CardFace({
   children: ReactNode
   faceTransform?: string
   imageFit?: "fill" | "cover"
+  captureRef?: Ref<HTMLDivElement>
 }) {
   return (
     <div
       className={`absolute inset-0 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] ${faceTransform}`}
     >
-      <div className="id-card-text-scope relative h-full w-full overflow-hidden rounded-xl border border-[#d9d9d9] bg-white">
+      <div
+        ref={captureRef}
+        className="id-card-text-scope relative h-full w-full overflow-hidden rounded-xl border border-[#d9d9d9] bg-white"
+      >
         {!backgroundFailed && backgroundUrl ? (
           <img
             src={backgroundUrl}
@@ -205,6 +212,8 @@ export function DigitalIdCard({
   frontBackgroundFailed,
   backBackgroundFailed,
   photoFailed,
+  frontCaptureRef,
+  backCaptureRef,
 }: DigitalIdCardProps) {
   return (
     <div
@@ -228,6 +237,7 @@ export function DigitalIdCard({
         backgroundUrl={frontBackgroundUrl}
         backgroundFailed={frontBackgroundFailed}
         onBackgroundError={onFrontBackgroundError}
+        captureRef={frontCaptureRef}
       >
         <CardFrontContent data={data} photoFailed={photoFailed} onPhotoError={onPhotoError} />
       </CardFace>
@@ -238,6 +248,7 @@ export function DigitalIdCard({
         onBackgroundError={onBackBackgroundError}
         faceTransform="[transform:rotateY(180deg)_translateZ(1px)]"
         imageFit="cover"
+        captureRef={backCaptureRef}
       >
         {backBackgroundFailed || !backBackgroundUrl ? <CardBackContent /> : null}
       </CardFace>
