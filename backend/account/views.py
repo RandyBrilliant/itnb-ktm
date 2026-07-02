@@ -250,6 +250,7 @@ class StudentImportView(APIView):
                     place_of_birth=r.get("place_of_birth") or "",
                     date_of_birth=r.get("date_of_birth"),
                     alumni_year=r.get("alumni_year"),
+                    is_active=True,
                 )
                 created += 1
             except Exception as exc:

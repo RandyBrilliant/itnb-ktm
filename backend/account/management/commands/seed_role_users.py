@@ -87,6 +87,7 @@ class Command(BaseCommand):
                     "department": item.get("department", ""),
                     "institutional_id": item.get("institutional_id"),
                     "alumni_year": item.get("alumni_year"),
+                    "is_active": True,
                 },
             )
 

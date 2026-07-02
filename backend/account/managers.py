@@ -33,6 +33,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError(_("Alamat email wajib diisi."))
         email = self._normalize_email(email)
         extra_fields.setdefault("role", ROLE_STUDENT)
+        extra_fields.setdefault("is_active", True)
         user = self.model(email=email, **extra_fields)
         if password is not None:
             user.set_password(password)

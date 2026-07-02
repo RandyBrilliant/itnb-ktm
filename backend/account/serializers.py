@@ -209,6 +209,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "address",
         ]
 
+    def validate_is_active(self, value):
+        # New accounts are always created active; use deactivate endpoint later if needed.
+        return True
+
     def validate_institutional_id(self, value):
         if value in (None, ""):
             return None
@@ -246,6 +250,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
             validated_data.setdefault("is_staff", True)
         elif role == UserRole.LECTURER:
             validated_data.setdefault("is_staff", False)
+
+        validated_data["is_active"] = True
 
         user = CustomUser.objects.create_user(
             password=password,
