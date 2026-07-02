@@ -16,6 +16,7 @@ services:
     environment:
       - DATABASE_URL=postgres://${SQL_USER:-postgres}:${SQL_PASSWORD:-}@db:5432/${SQL_DATABASE:-itnb_hub}
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
       - .:/app
       - media_volume:/app/media
@@ -36,6 +37,7 @@ services:
     environment:
       - DATABASE_URL=postgres://${SQL_USER:-postgres}:${SQL_PASSWORD:-}@db:5432/${SQL_DATABASE:-itnb_hub}
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
       - .:/app
       - media_volume:/app/media
@@ -56,6 +58,7 @@ services:
     environment:
       - DATABASE_URL=postgres://${SQL_USER:-postgres}:${SQL_PASSWORD:-}@db:5432/${SQL_DATABASE:-itnb_hub}
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
       - .:/app
       - media_volume:/app/media

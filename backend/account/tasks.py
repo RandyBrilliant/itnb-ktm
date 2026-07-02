@@ -70,7 +70,13 @@ def optimize_document_image(self, document_id: int):
     doc.file.save(name, ContentFile(buf.read()), save=True)
 
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    max_retries=3,
+)
 def send_email_async(
     self,
     to_email: str,

@@ -313,8 +313,19 @@ SIMPLE_JWT = {
 # Celery Configuration (for async tasks like PDF generation)
 # ---------------------------------------------------------------------------
 
-CELERY_BROKER_URL = get_env('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = get_env('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+def _default_redis_url() -> str:
+    """Use Docker service hostname when the app runs in compose."""
+    database_url = get_env('DATABASE_URL', '') or ''
+    sql_host = get_env('SQL_HOST', '') or ''
+    if '@db:' in database_url or sql_host == 'db':
+        return 'redis://redis:6379/0'
+    return 'redis://localhost:6379/0'
+
+
+_DEFAULT_REDIS_URL = _default_redis_url()
+
+CELERY_BROKER_URL = get_env('CELERY_BROKER_URL', _DEFAULT_REDIS_URL)
+CELERY_RESULT_BACKEND = get_env('CELERY_RESULT_BACKEND', _DEFAULT_REDIS_URL)
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

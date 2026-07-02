@@ -81,11 +81,14 @@ def send_transactional_email(
         if _should_queue_email():
             from account.tasks import send_email_async
 
-            send_email_async.delay(
-                to_email=to_email,
-                subject=subject,
-                body=message,
-                html_message=html_message,
+            send_email_async.apply_async(
+                kwargs={
+                    "to_email": to_email,
+                    "subject": subject,
+                    "body": message,
+                    "html_message": html_message,
+                },
+                ignore_result=True,
             )
             logger.info("Queued email %r to %s", subject, to_email)
             return
