@@ -70,14 +70,19 @@ def optimize_document_image(self, document_id: int):
     doc.file.save(name, ContentFile(buf.read()), save=True)
 
 
-@shared_task
-def send_email_async(to_email: str, subject: str, body: str, html_message: str = None):
-    """
-    Send email in the background via Django (Mailgun API when MAILGUN_API_KEY is set).
-    """
-    from django.core.mail import send_mail
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
+def send_email_async(
+    self,
+    to_email: str,
+    subject: str,
+    body: str,
+    html_message: str | None = None,
+):
+    """Send email in the background via Django (Mailgun API when configured)."""
     from django.conf import settings
+    from django.core.mail import send_mail
 
+    logger.info("Sending queued email %r to %s (attempt %s)", subject, to_email, self.request.retries + 1)
     send_mail(
         subject=subject,
         message=body,
@@ -86,6 +91,7 @@ def send_email_async(to_email: str, subject: str, body: str, html_message: str =
         html_message=html_message,
         fail_silently=False,
     )
+    logger.info("Sent queued email %r to %s", subject, to_email)
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=2)
