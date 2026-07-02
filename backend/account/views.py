@@ -8,7 +8,6 @@ import logging
 from datetime import timedelta
 from pathlib import Path
 from django.conf import settings
-from django.core.mail import send_mail
 from django.core.files.base import ContentFile
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
@@ -66,6 +65,7 @@ from .api_responses import (
 from .exceptions import DeleteNotAllowed
 from .services.qr_generation import generate_qr_code, save_qr_to_bytes
 from .services.email_verification import create_and_send_verification_code
+from .services.email_delivery import EmailDeliveryError, ensure_outbound_email_configured, send_transactional_email
 from .placeholder_email import user_requires_email_setup
 from .services.student_import import build_student_import_workbook, parse_student_import_xlsx
 from .services.student_photo_import import extract_photo_entries, normalize_avatar
@@ -401,7 +401,20 @@ class ForgotPasswordRequestView(APIView):
         serializer.is_valid(raise_exception=True)
 
         email = serializer.validated_data["email"].strip().lower()
-        user = CustomUser.objects.filter(email=email, is_active=True).first()
+
+        try:
+            ensure_outbound_email_configured()
+        except EmailDeliveryError:
+            logger.exception("Email delivery is not configured or unavailable for password reset")
+            return Response(
+                error_response(
+                    detail="Could not send password reset email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        user = CustomUser.objects.filter(email__iexact=email, is_active=True).first()
 
         if user:
             uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -410,19 +423,24 @@ class ForgotPasswordRequestView(APIView):
             reset_url = f"{base_url}/reset-password?uid={uid}&token={token}"
 
             try:
-                send_mail(
+                send_transactional_email(
+                    to_email=user.email,
                     subject="ITNB Hub Password Reset",
                     message=(
                         "We received a request to reset your password.\n\n"
                         f"Use this link to set a new password:\n{reset_url}\n\n"
                         "If you did not request this, you can ignore this email."
                     ),
-                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@itnb.local"),
-                    recipient_list=[user.email],
-                    fail_silently=False,
                 )
-            except Exception as exc:
-                logger.exception("Failed to send password reset email: %s", exc)
+            except EmailDeliveryError:
+                logger.exception("Failed to send password reset email to %s", user.email)
+                return Response(
+                    error_response(
+                        detail="Could not send password reset email. Please try again later.",
+                        code=ApiCode.INTERNAL_ERROR,
+                    ),
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
         return Response(
             success_response(
@@ -497,6 +515,15 @@ class RequestEmailVerificationView(APIView):
 
         try:
             create_and_send_verification_code(user)
+        except EmailDeliveryError:
+            logger.exception("Failed to send email verification code to %s", user.email)
+            return Response(
+                error_response(
+                    detail="Could not send verification email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         except Exception:
             logger.exception("Failed to send email verification code to %s", user.email)
             return Response(
@@ -529,6 +556,15 @@ class RequestEmailChangeView(APIView):
 
         try:
             create_and_send_verification_code(request.user, pending_email=new_email)
+        except EmailDeliveryError:
+            logger.exception("Failed to send email change verification to %s", new_email)
+            return Response(
+                error_response(
+                    detail="Could not send verification email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         except Exception:
             logger.exception("Failed to send email change verification to %s", new_email)
             return Response(

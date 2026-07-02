@@ -78,11 +78,15 @@ class MailgunEmailBackend(BaseEmailBackend):
             )
             response.raise_for_status()
             return True
-        except requests.RequestException:
+        except requests.RequestException as exc:
+            response_detail = ""
+            if exc.response is not None:
+                response_detail = exc.response.text
             logger.exception(
-                "Mailgun API request failed for subject=%r recipients=%r",
+                "Mailgun API request failed for subject=%r recipients=%r response=%s",
                 message.subject,
                 message.to,
+                response_detail,
             )
             if not self.fail_silently:
                 raise

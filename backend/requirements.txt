@@ -19,6 +19,9 @@ reportlab==4.0.9
 # Environment & Config
 django-environ==0.13.0
 
+# PostgreSQL (production / Docker)
+psycopg2-binary==2.9.10
+
 # Async Tasks
 celery==5.3.4
 redis==5.0.1

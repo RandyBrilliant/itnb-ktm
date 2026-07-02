@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from django.conf import settings
-from django.core.mail import send_mail
-
 from account.models import EmailVerificationCode
+from account.services.email_delivery import EmailDeliveryError, send_transactional_email
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +35,10 @@ def send_verification_code_email(
             "If you did not request this, you can ignore this email."
         )
 
-    send_mail(
+    send_transactional_email(
+        to_email=target_email,
         subject=subject,
         message=message,
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@itnb.local"),
-        recipient_list=[target_email],
-        fail_silently=False,
     )
 
 
@@ -58,6 +54,8 @@ def create_and_send_verification_code(user, *, pending_email: str | None = None)
             code=verification.code,
             purpose=purpose,
         )
+    except EmailDeliveryError:
+        raise
     except Exception:
         logger.exception("Failed to send verification email to %s", target_email)
         raise

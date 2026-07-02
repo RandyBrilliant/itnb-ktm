@@ -14,22 +14,24 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-# Load environment variables
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env (django-environ)
 try:
     import environ
-    env_file = Path(__file__).resolve().parent.parent / ".env"
+
+    env = environ.Env()
+    env_file = BASE_DIR / ".env"
     if env_file.exists():
         environ.Env.read_env(env_file)
 except ImportError:
-    pass
+    env = None
 
-# Helper to get environment variables with defaults
+
 def get_env(key, default=None):
     """Get environment variable with optional default."""
     return os.environ.get(key, default)
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -63,18 +65,28 @@ CSRF_TRUSTED_ORIGINS = get_env(
     "http://localhost:3000,http://localhost:5173"
 ).split(",") if get_env("CSRF_TRUSTED_ORIGINS") else []
 FRONTEND_URL = get_env("FRONTEND_URL", "http://localhost:5173")
-DEFAULT_FROM_EMAIL = get_env("DEFAULT_FROM_EMAIL", "noreply@itnb.local")
 
 # Mailgun API (https://documentation.mailgun.com/docs/mailgun/api-reference/)
 MAILGUN_API_KEY = get_env("MAILGUN_API_KEY", "")
 MAILGUN_DOMAIN = get_env("MAILGUN_DOMAIN", "")
 MAILGUN_API_URL = get_env("MAILGUN_API_URL", "https://api.mailgun.net/v3")
+# Optional display name; keep DEFAULT_FROM_EMAIL as the address only (no spaces needed).
+MAILGUN_FROM_NAME = get_env("MAILGUN_FROM_NAME", "ITNB Hub")
+
+_raw_from_email = (get_env("DEFAULT_FROM_EMAIL") or "").strip()
+if _raw_from_email:
+    if "@" in _raw_from_email and "<" not in _raw_from_email and MAILGUN_FROM_NAME:
+        DEFAULT_FROM_EMAIL = f"{MAILGUN_FROM_NAME} <{_raw_from_email}>"
+    else:
+        DEFAULT_FROM_EMAIL = _raw_from_email
+elif MAILGUN_DOMAIN:
+    DEFAULT_FROM_EMAIL = f"{MAILGUN_FROM_NAME} <noreply@{MAILGUN_DOMAIN}>"
+else:
+    DEFAULT_FROM_EMAIL = "noreply@itnb.local"
 
 if MAILGUN_API_KEY and MAILGUN_DOMAIN:
-    EMAIL_BACKEND = get_env(
-        "EMAIL_BACKEND",
-        "account.backends.mailgun.MailgunEmailBackend",
-    )
+    # Mailgun credentials take priority over legacy console/SMTP EMAIL_BACKEND values.
+    EMAIL_BACKEND = "account.backends.mailgun.MailgunEmailBackend"
 else:
     EMAIL_BACKEND = get_env(
         "EMAIL_BACKEND",
@@ -142,13 +154,30 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+# Production/Docker: DATABASE_URL (postgres://...) from compose or .env
+# Local dev: omit DATABASE_URL to use SQLite at BASE_DIR/db.sqlite3
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    },
-}
+if env is not None:
+    DATABASES = {
+        'default': env.db(
+            'DATABASE_URL',
+            default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        ),
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        },
+    }
+
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    DATABASES['default'].setdefault(
+        'CONN_MAX_AGE',
+        int(get_env('DATABASE_CONN_MAX_AGE', '60')),
+    )
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
 # External myitnb MariaDB (read-only via PyMySQL in academic app; not Django DATABASES)
 MYITNB_DB_HOST = get_env('MYITNB_DB_HOST', '')
