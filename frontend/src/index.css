@@ -2,7 +2,7 @@
 @import "react-day-picker/style.css";
 
 @layer utilities {
-  /* Student ID card: both cqw + cqh need block+inline size containment */
+  /* ID card faces: cqw/cqh need size containment on the clip layer, not the 3D flip root */
   .id-card-text-scope {
     container-type: size;
   }

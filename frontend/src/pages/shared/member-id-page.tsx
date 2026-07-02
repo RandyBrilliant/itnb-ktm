@@ -91,7 +91,7 @@ export function MemberIdPage({ role }: { role: UserRole }) {
           </button>
         </div>
 
-        <div className="[perspective:1200px]">
+        <div className="overflow-hidden rounded-xl [perspective:1200px]">
           <DigitalIdCard
             flipped={flipped}
             onFlip={() => setFlipped((prev) => !prev)}

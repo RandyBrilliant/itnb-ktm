@@ -74,33 +74,35 @@ function CardFace({
   backgroundFailed,
   onBackgroundError,
   children,
-  className = "",
+  faceTransform = "[transform:translateZ(1px)]",
   imageFit = "fill",
 }: {
   backgroundUrl: string
   backgroundFailed?: boolean
   onBackgroundError?: () => void
   children: ReactNode
-  className?: string
+  faceTransform?: string
   imageFit?: "fill" | "cover"
 }) {
   return (
     <div
-      className={`absolute inset-0 overflow-hidden rounded-xl border border-[#d9d9d9] bg-white [backface-visibility:hidden] [-webkit-backface-visibility:hidden] ${className}`}
+      className={`absolute inset-0 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] ${faceTransform}`}
     >
-      {!backgroundFailed && backgroundUrl ? (
-        <img
-          src={backgroundUrl}
-          alt=""
-          className={`pointer-events-none absolute inset-0 h-full w-full ${
-            imageFit === "cover" ? "object-cover" : "object-fill"
-          }`}
-          onError={onBackgroundError}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-white" />
-      )}
-      {children ? <div className="relative z-[1] h-full">{children}</div> : null}
+      <div className="id-card-text-scope relative h-full w-full overflow-hidden rounded-xl border border-[#d9d9d9] bg-white">
+        {!backgroundFailed && backgroundUrl ? (
+          <img
+            src={backgroundUrl}
+            alt=""
+            className={`pointer-events-none absolute inset-0 h-full w-full ${
+              imageFit === "cover" ? "object-cover" : "object-fill"
+            }`}
+            onError={onBackgroundError}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-white" />
+        )}
+        {children ? <div className="relative z-[1] h-full">{children}</div> : null}
+      </div>
     </div>
   )
 }
@@ -217,7 +219,7 @@ export function DigitalIdCard({
           onFlip()
         }
       }}
-      className={`id-card-text-scope relative mx-auto w-full max-w-[340px] transition-transform duration-500 ease-in-out [transform-style:preserve-3d] [-webkit-transform-style:preserve-3d] ${
+      className={`relative mx-auto w-full max-w-[340px] transition-transform duration-500 ease-in-out [transform-style:preserve-3d] [-webkit-transform-style:preserve-3d] ${
         onFlip ? "cursor-pointer select-none" : ""
       } ${flipped ? "[transform:rotateY(180deg)]" : "[transform:rotateY(0deg)]"}`}
       style={{ aspectRatio: CARD_ASPECT }}
@@ -234,7 +236,7 @@ export function DigitalIdCard({
         backgroundUrl={backBackgroundUrl}
         backgroundFailed={backBackgroundFailed}
         onBackgroundError={onBackBackgroundError}
-        className="[transform:rotateY(180deg)]"
+        faceTransform="[transform:rotateY(180deg)_translateZ(1px)]"
         imageFit="cover"
       >
         {backBackgroundFailed || !backBackgroundUrl ? <CardBackContent /> : null}
