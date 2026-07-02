@@ -54,6 +54,8 @@ CORS_ALLOWED_ORIGINS = get_env(
 
 # Production security settings
 SECURE_SSL_REDIRECT = get_env("SECURE_SSL_REDIRECT", "False").lower() in ("true", "1", "yes")
+# Allow internal HTTP probes (Docker healthcheck, deploy scripts) when SSL redirect is on.
+SECURE_REDIRECT_EXEMPT = [r"^health/$"]
 SESSION_COOKIE_SECURE = get_env("SESSION_COOKIE_SECURE", "False").lower() in ("true", "1", "yes")
 CSRF_COOKIE_SECURE = get_env("CSRF_COOKIE_SECURE", "False").lower() in ("true", "1", "yes")
 CSRF_TRUSTED_ORIGINS = get_env(
