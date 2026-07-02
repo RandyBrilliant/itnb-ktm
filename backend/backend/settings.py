@@ -64,10 +64,22 @@ CSRF_TRUSTED_ORIGINS = get_env(
 ).split(",") if get_env("CSRF_TRUSTED_ORIGINS") else []
 FRONTEND_URL = get_env("FRONTEND_URL", "http://localhost:5173")
 DEFAULT_FROM_EMAIL = get_env("DEFAULT_FROM_EMAIL", "noreply@itnb.local")
-EMAIL_BACKEND = get_env(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",
-)
+
+# Mailgun API (https://documentation.mailgun.com/docs/mailgun/api-reference/)
+MAILGUN_API_KEY = get_env("MAILGUN_API_KEY", "")
+MAILGUN_DOMAIN = get_env("MAILGUN_DOMAIN", "")
+MAILGUN_API_URL = get_env("MAILGUN_API_URL", "https://api.mailgun.net/v3")
+
+if MAILGUN_API_KEY and MAILGUN_DOMAIN:
+    EMAIL_BACKEND = get_env(
+        "EMAIL_BACKEND",
+        "account.backends.mailgun.MailgunEmailBackend",
+    )
+else:
+    EMAIL_BACKEND = get_env(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.console.EmailBackend",
+    )
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

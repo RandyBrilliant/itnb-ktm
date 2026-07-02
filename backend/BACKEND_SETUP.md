@@ -106,13 +106,11 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_LIFETIME=3600  # 1 hour
 JWT_REFRESH_TOKEN_LIFETIME=604800  # 7 days
 
-# Email Configuration
-EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
+# Email Configuration (Mailgun API)
+MAILGUN_API_KEY=your-mailgun-api-key
+MAILGUN_DOMAIN=mg.yourdomain.com
+DEFAULT_FROM_EMAIL=noreply@mg.yourdomain.com
+# MAILGUN_API_URL=https://api.eu.mailgun.net/v3  # EU region only
 
 # Redis (for Celery & Channels)
 REDIS_URL=redis://localhost:6379/0
@@ -493,7 +491,7 @@ chmod -R 755 media/
 ```
 
 ### Issue: "Email not sending"
-**Solution**: Configure EMAIL_* settings in .env (use console backend for testing)
+**Solution**: Set `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, and `DEFAULT_FROM_EMAIL` in `.env` (use console backend for local testing by leaving Mailgun vars empty)
 
 ## Performance Tips
 

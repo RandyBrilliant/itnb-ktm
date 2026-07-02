@@ -24,7 +24,7 @@ export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
   const basePath = getRoleBasePath(role)
   const reg = webinar.my_registration
   const isRegistered = reg != null && reg.status !== "CANCELLED"
-  const showStudentActions = role === "STUDENT"
+  const showMemberActions = role === "STUDENT" || role === "ALUMNI"
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: [role, "news", postId] })
@@ -83,7 +83,7 @@ export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
             </>
           ) : null}
         </div>
-      ) : showStudentActions ? (
+      ) : showMemberActions ? (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {!isRegistered ? (
             <button
@@ -100,7 +100,7 @@ export function WebinarPostCta({ webinar, role, postId }: WebinarPostCtaProps) {
                 {reg?.status_display || "Registered"}
               </span>
               <Link
-                to={`${basePath}/webinars`}
+                to={`${basePath}/certificates?tab=webinars`}
                 className="rounded-lg border border-[#d5d5d5] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-[#1a1c1c] transition hover:bg-[#f3f3f3]"
               >
                 Check in on Webinars

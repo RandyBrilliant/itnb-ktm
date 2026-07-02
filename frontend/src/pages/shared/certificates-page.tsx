@@ -20,7 +20,7 @@ function statusLabel(item: CertificateItem) {
   return item.status_display || item.status
 }
 
-export function CertificatesPage({ role }: { role: UserRole }) {
+export function CertificatesListSection({ role }: { role: UserRole }) {
   const [page, setPage] = useState(1)
   const [downloadingId, setDownloadingId] = useState<number | null>(null)
   const { data, isLoading } = useQuery({
@@ -44,7 +44,6 @@ export function CertificatesPage({ role }: { role: UserRole }) {
   }
 
   return (
-    <RoleContentLayout role={role} title="Certificates">
       <section className="space-y-5">
         {isLoading ? (
           <div className="space-y-3">
@@ -119,6 +118,13 @@ export function CertificatesPage({ role }: { role: UserRole }) {
           </div>
         )}
       </section>
+  )
+}
+
+export function CertificatesPage({ role }: { role: UserRole }) {
+  return (
+    <RoleContentLayout role={role} title="Certificates">
+      <CertificatesListSection role={role} />
     </RoleContentLayout>
   )
 }

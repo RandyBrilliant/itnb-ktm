@@ -1,7 +1,7 @@
-import { CertificatesPage } from "@/pages/shared/certificates-page"
+import { CredentialsPage } from "@/pages/shared/credentials-page"
 
 export function StudentCertificatesPage() {
-  return <CertificatesPage role="STUDENT" />
+  return <CredentialsPage role="STUDENT" />
 }
 
 export default StudentCertificatesPage

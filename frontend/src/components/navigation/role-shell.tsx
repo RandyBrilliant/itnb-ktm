@@ -212,8 +212,14 @@ export function RoleShell({
     avatarUrl ?? (user?.photo ? resolveMediaUrl(user.photo) : undefined)
 
   const isActive = (href: string): boolean => {
-    if (href === "/student" || href === "/staff" || href === "/lecturer") {
+    if (href === "/student" || href === "/staff" || href === "/lecturer" || href === "/alumni") {
       return location.pathname === href || location.pathname === `${href}/dashboard`
+    }
+    if (href.endsWith("/certificates")) {
+      return (
+        location.pathname.startsWith(href) ||
+        location.pathname.startsWith(`${href.split("/certificates")[0]}/webinars`)
+      )
     }
     return location.pathname.startsWith(href)
   }

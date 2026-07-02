@@ -73,7 +73,6 @@ const StudentCertificatesPage = lazy(() => import("@/pages/student/certificates"
 const StudentNewsPage = lazy(() => import("@/pages/student/news").then((m) => ({ default: m.StudentNewsPage })))
 const StudentPerksPage = lazy(() => import("@/pages/student/perks").then((m) => ({ default: m.StudentPerksPage })))
 const StudentScoresPage = lazy(() => import("@/pages/student/scores").then((m) => ({ default: m.StudentScoresPage })))
-const StudentWebinarsPage = lazy(() => import("@/pages/student/webinars").then((m) => ({ default: m.StudentWebinarsPage })))
 const NewsPage = lazy(() => import("@/pages/shared/news-page").then((m) => ({ default: m.NewsPage })))
 const PerksPage = lazy(() => import("@/pages/shared/perks-page").then((m) => ({ default: m.PerksPage })))
 const NewsDetailPage = lazy(() => import("@/pages/shared/news-detail-page").then((m) => ({ default: m.NewsDetailPage })))
@@ -81,6 +80,9 @@ const PerkDetailPage = lazy(() => import("@/pages/shared/perk-detail-page").then
 const CertificateDetailPage = lazy(() => import("@/pages/shared/certificate-detail-page").then((m) => ({ default: m.CertificateDetailPage })))
 const ProfilePage = lazy(() => import("@/pages/shared/profile-page").then((m) => ({ default: m.ProfilePage })))
 const ChangePasswordPage = lazy(() => import("@/pages/shared/change-password-page").then((m) => ({ default: m.ChangePasswordPage })))
+const CredentialsPage = lazy(() => import("@/pages/shared/credentials-page").then((m) => ({ default: m.CredentialsPage })))
+const MemberIdPage = lazy(() => import("@/pages/shared/member-id-page").then((m) => ({ default: m.MemberIdPage })))
+const AlumniDashboardPage = lazy(() => import("@/pages/alumni/dashboard").then((m) => ({ default: m.AlumniDashboardPage })))
 
 /**
  * Main App component with routing
@@ -408,7 +410,7 @@ function App() {
               path="/student/webinars"
               element={
                 <ProtectedRoute allowedRoles={["STUDENT"]}>
-                  <StudentWebinarsPage />
+                  <Navigate to="/student/certificates?tab=webinars" replace />
                 </ProtectedRoute>
               }
             />
@@ -450,7 +452,95 @@ function App() {
               path="/alumni/*"
               element={
                 <ProtectedRoute allowedRoles={["ALUMNI"]}>
-                  <div>Alumni Dashboard (Coming soon)</div>
+                  <AlumniDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <AlumniDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/id"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <MemberIdPage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/profile"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <ProfilePage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/change-password"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <ChangePasswordPage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/certificates"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <CredentialsPage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/certificates/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <CertificateDetailPage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/webinars"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <Navigate to="/alumni/certificates?tab=webinars" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/news"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <NewsPage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/news/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <NewsDetailPage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/perks"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <PerksPage role="ALUMNI" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alumni/perks/:id"
+              element={
+                <ProtectedRoute allowedRoles={["ALUMNI"]}>
+                  <PerkDetailPage role="ALUMNI" />
                 </ProtectedRoute>
               }
             />

@@ -1,7 +1,7 @@
-import { WebinarsPage } from "@/pages/shared/webinars-page"
+import { Navigate } from "react-router-dom"
 
 export function StudentWebinarsPage() {
-  return <WebinarsPage role="STUDENT" />
+  return <Navigate to="/student/certificates?tab=webinars" replace />
 }
 
 export default StudentWebinarsPage

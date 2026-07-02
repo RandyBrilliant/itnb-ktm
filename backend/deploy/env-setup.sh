@@ -144,36 +144,23 @@ else
     DB_PASSWORD=""
 fi
 
-echo -e "\n${YELLOW}=== Email Configuration ===${NC}\n"
+echo -e "\n${YELLOW}=== Email Configuration (Mailgun) ===${NC}\n"
 
-read -p "Email backend (console/smtp) [smtp]: " EMAIL_BACKEND
-EMAIL_BACKEND=${EMAIL_BACKEND:-smtp}
+read -p "Email backend (console/mailgun) [mailgun]: " EMAIL_BACKEND
+EMAIL_BACKEND=${EMAIL_BACKEND:-mailgun}
 
-if [[ "$EMAIL_BACKEND" == "smtp" ]]; then
-    read -p "Email host (e.g., smtp.gmail.com): " EMAIL_HOST
-    read -p "Email port [587]: " EMAIL_PORT
-    EMAIL_PORT=${EMAIL_PORT:-587}
-    
-    read -p "Email use TLS (True/False) [True]: " EMAIL_USE_TLS
-    EMAIL_USE_TLS=${EMAIL_USE_TLS:-True}
-    
-    while true; do
-        read -p "Email user/from address: " EMAIL_USER
-        if validate_email "$EMAIL_USER"; then
-            break
-        else
-            log_error "Invalid email address"
-        fi
-    done
-    
-    read -sp "Email password: " EMAIL_PASSWORD
+if [[ "$EMAIL_BACKEND" == "mailgun" ]]; then
+    read -sp "Mailgun API key: " MAILGUN_API_KEY
     echo ""
+    read -p "Mailgun sending domain (e.g., mg.example.com): " MAILGUN_DOMAIN
+    read -p "From address (must use Mailgun domain): " DEFAULT_FROM_EMAIL
+    read -p "Mailgun API URL [https://api.mailgun.net/v3]: " MAILGUN_API_URL
+    MAILGUN_API_URL=${MAILGUN_API_URL:-https://api.mailgun.net/v3}
 else
-    EMAIL_HOST=""
-    EMAIL_PORT=""
-    EMAIL_USE_TLS=""
-    EMAIL_USER=""
-    EMAIL_PASSWORD=""
+    MAILGUN_API_KEY=""
+    MAILGUN_DOMAIN=""
+    DEFAULT_FROM_EMAIL=""
+    MAILGUN_API_URL=""
 fi
 
 echo -e "\n${YELLOW}=== Security Configuration ===${NC}\n"
@@ -219,13 +206,11 @@ DATABASE_NAME=$DB_NAME
 DATABASE_USER=$DB_USER
 DATABASE_PASSWORD=$DB_PASSWORD
 
-# Email Configuration
-EMAIL_BACKEND=$EMAIL_BACKEND
-EMAIL_HOST=$EMAIL_HOST
-EMAIL_PORT=$EMAIL_PORT
-EMAIL_USE_TLS=$EMAIL_USE_TLS
-EMAIL_HOST_USER=$EMAIL_USER
-EMAIL_HOST_PASSWORD=$EMAIL_PASSWORD
+# Email Configuration (Mailgun API)
+MAILGUN_API_KEY=$MAILGUN_API_KEY
+MAILGUN_DOMAIN=$MAILGUN_DOMAIN
+DEFAULT_FROM_EMAIL=$DEFAULT_FROM_EMAIL
+MAILGUN_API_URL=$MAILGUN_API_URL
 
 # Redis
 REDIS_HOST=$REDIS_HOST

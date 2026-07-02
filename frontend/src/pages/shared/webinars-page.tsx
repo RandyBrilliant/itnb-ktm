@@ -251,7 +251,7 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
   )
 }
 
-export function WebinarsPage({ role }: { role: UserRole }) {
+export function WebinarsListSection({ role }: { role: UserRole }) {
   const [page, setPage] = useState(1)
   const { data, isLoading } = useQuery({
     queryKey: [role, "webinars", page],
@@ -261,12 +261,6 @@ export function WebinarsPage({ role }: { role: UserRole }) {
   const webinars = data?.results ?? []
 
   return (
-    <RoleContentLayout
-      role={role}
-      title="Webinars"
-      subtitle="Register, attend, and earn certificates"
-      maxWidthClassName="max-w-3xl"
-    >
       <section className="space-y-6">
         {isLoading ? (
           <div className="space-y-4">
@@ -286,6 +280,18 @@ export function WebinarsPage({ role }: { role: UserRole }) {
           </div>
         )}
       </section>
+  )
+}
+
+export function WebinarsPage({ role }: { role: UserRole }) {
+  return (
+    <RoleContentLayout
+      role={role}
+      title="Webinars"
+      subtitle="Register, attend, and earn certificates"
+      maxWidthClassName="max-w-3xl"
+    >
+      <WebinarsListSection role={role} />
     </RoleContentLayout>
   )
 }

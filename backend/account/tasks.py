@@ -73,7 +73,7 @@ def optimize_document_image(self, document_id: int):
 @shared_task
 def send_email_async(to_email: str, subject: str, body: str, html_message: str = None):
     """
-    Kirim email di background via Django (Mailgun API bila MAILGUN_API_KEY diset).
+    Send email in the background via Django (Mailgun API when MAILGUN_API_KEY is set).
     """
     from django.core.mail import send_mail
     from django.conf import settings
