@@ -63,5 +63,5 @@ celerybeat-schedule
 postgres_data/
 redis_data/
 
-# IDE Python libraries
-lib/
+# Virtualenv lib dirs are covered by env/, .venv/, venv/ above.
+# Do not add a bare lib/ rule — it ignores deploy/lib/ (deploy scripts).
