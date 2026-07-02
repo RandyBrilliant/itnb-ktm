@@ -77,6 +77,7 @@ export interface AttendanceToken {
   token: string
   phase: "in" | "out"
   payload: string
+  attendance_url?: string
   qr_data_url: string
   step_seconds: number
   expires_in: number

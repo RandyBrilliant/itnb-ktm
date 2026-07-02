@@ -46,7 +46,9 @@ export function ProtectedRoute({
   }
 
   if (!hasAccessToken || !isAuthenticated) {
-    return <Navigate to={loginPath} replace />
+    const next = encodeURIComponent(`${location.pathname}${location.search}`)
+    const separator = loginPath.includes("?") ? "&" : "?"
+    return <Navigate to={`${loginPath}${separator}next=${next}`} replace />
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {

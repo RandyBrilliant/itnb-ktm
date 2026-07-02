@@ -14,6 +14,7 @@ import {
   registrationDayEnd,
   registrationDayStart,
 } from "@/lib/datetime"
+import { WEBINAR_COVER_IMAGE_SPEC } from "@/lib/media-guidelines"
 
 const MODE_OPTIONS: { value: WebinarMode; label: string }[] = [
   { value: "OFFLINE", label: "In-person" },
@@ -208,7 +209,9 @@ export function WebinarForm({
           file={imageFile}
           existingImageUrl={existingImageUrl}
           enableCrop
-          cropAspect={16 / 9}
+          cropAspect={4 / 5}
+          imageSpec={WEBINAR_COVER_IMAGE_SPEC}
+          previewClassName="mx-auto aspect-[4/5] w-full max-w-sm rounded-sm border border-[#e2e2e2] object-cover"
           onFileChange={setImageFile}
           onValidationError={(message) => toast.warning("Invalid image", message)}
         />

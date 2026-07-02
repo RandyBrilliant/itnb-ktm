@@ -10,6 +10,7 @@ import { formatAppDate } from "@/lib/datetime"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { PaginationControls } from "@/components/content/pagination-controls"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 
 function formatDate(value?: string | null) {
   if (!value) return "-"
@@ -79,9 +80,14 @@ export function CertificatesListSection({ role }: { role: UserRole }) {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-lg font-bold text-[#1a1c1c]">{cert.title}</p>
-                        {cert.recipient_name ? (
-                          <p className="mt-0.5 text-sm font-semibold text-[#3b3b3b]">{cert.recipient_name}</p>
-                        ) : null}
+                        <PersonNameBlock
+                          className="mt-1"
+                          name={cert.recipient_name || cert.user?.full_name || "—"}
+                          institutionalId={cert.recipient_id_display || cert.user?.institutional_id}
+                          role={cert.user?.role}
+                          nameClassName="text-sm font-semibold text-[#3b3b3b]"
+                          institutionalIdClassName="text-xs font-mono text-[#5f5e5e]"
+                        />
                         <p className="mt-1 text-sm text-[#5f5e5e]">{cert.description || "Official academic certificate"}</p>
                       </div>
                       <span className="rounded-full bg-[#af0f24]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#af0f24]">

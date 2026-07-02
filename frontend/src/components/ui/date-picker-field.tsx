@@ -60,7 +60,8 @@ export function DatePickerField({
             variant="outline"
             disabled={disabled}
             className={cn(
-              "h-auto w-full justify-start border-[#d5d5d5] px-3 py-2 text-left text-sm font-normal hover:bg-white",
+              "h-auto w-full justify-start border-[#d5d5d5] px-3 py-2 text-left text-sm font-normal",
+              "hover:bg-[#fafafa] focus-visible:ring-2 focus-visible:ring-[#af0f24]/30",
               !selectedDate && "text-[#8a8a8a]"
             )}
           >

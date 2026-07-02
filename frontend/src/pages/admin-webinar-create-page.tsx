@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { createWebinar } from "@/api/webinars"
 import { WebinarForm } from "@/components/admin/webinar-form"
 import { toast } from "@/lib/toast"
@@ -6,6 +7,7 @@ import { getUserFriendlyError } from "@/lib/error-message"
 
 export function AdminWebinarCreatePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   return (
     <div className="space-y-8">
@@ -22,6 +24,7 @@ export function AdminWebinarCreatePage() {
         onSubmit={async (payload) => {
           try {
             await createWebinar(payload)
+            await queryClient.invalidateQueries({ queryKey: ["admin-webinars"] })
             toast.success("Webinar created")
             navigate("/admin/webinars", { replace: true })
           } catch (error) {

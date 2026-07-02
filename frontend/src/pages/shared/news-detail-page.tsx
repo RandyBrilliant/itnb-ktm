@@ -24,6 +24,7 @@ export function NewsDetailPage({ role }: { role: UserRole }) {
   })
 
   const image = resolveMediaUrl(data?.image) || data?.image_url || ""
+  const imageAspectClass = data?.webinar ? "aspect-[4/5]" : "aspect-video"
 
   return (
     <RoleContentLayout role={role} title="Article" subtitle="Campus news" maxWidthClassName="max-w-3xl">
@@ -37,12 +38,12 @@ export function NewsDetailPage({ role }: { role: UserRole }) {
 
         {isLoading ? (
           <div className="px-5 pb-5">
-            <div className="mt-4 aspect-video animate-pulse rounded-xl bg-[#ececec]" />
+            <div className={`mt-4 ${imageAspectClass} animate-pulse rounded-xl bg-[#ececec]`} />
           </div>
         ) : data ? (
           <>
             <div className="relative mt-4 px-5">
-              <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-[#f0f0f0]">
+              <div className={`relative ${imageAspectClass} w-full overflow-hidden rounded-xl bg-[#f0f0f0]`}>
                 {image ? (
                   <img src={image} alt={data.title} className="h-full w-full object-cover" />
                 ) : (

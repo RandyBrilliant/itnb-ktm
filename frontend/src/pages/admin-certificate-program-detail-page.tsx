@@ -13,6 +13,7 @@ import { getUserFriendlyError } from "@/lib/error-message"
 import { toast } from "@/lib/toast"
 import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
 import { PaginationControls } from "@/components/content/pagination-controls"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 
 export function AdminCertificateProgramDetailPage() {
   const { programId } = useParams<{ programId: string }>()
@@ -180,7 +181,6 @@ export function AdminCertificateProgramDetailPage() {
                     <th className="px-4 py-3">Certificate name</th>
                     <th className="px-4 py-3">ID on PDF</th>
                     <th className="px-4 py-3">Portal user</th>
-                    <th className="px-4 py-3">Inst. ID</th>
                     <th className="px-4 py-3">Portal</th>
                     <th className="px-4 py-3 text-right">Certificate & actions</th>
                   </tr>
@@ -191,12 +191,14 @@ export function AdminCertificateProgramDetailPage() {
                       <td className="px-4 py-3 font-semibold text-[#1a1c1c]">{c.recipient_name || "—"}</td>
                       <td className="px-4 py-3 font-mono text-xs text-[#5f5e5e]">{c.recipient_id_display || "—"}</td>
                       <td className="px-4 py-3 text-[#3b3b3b]">
-                        <span className="block truncate max-w-[200px]" title={c.user?.email}>
-                          {c.user?.full_name || c.user?.email || "—"}
-                        </span>
-                        <span className="text-xs text-[#8a8a8a]">{c.user?.email}</span>
+                        <PersonNameBlock
+                          name={c.user?.full_name || c.user?.email || "—"}
+                          institutionalId={c.user?.institutional_id}
+                          role={c.user?.role}
+                          subtitle={c.user?.email}
+                          subtitleClassName="text-xs text-[#8a8a8a]"
+                        />
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs">{c.user?.institutional_id || "—"}</td>
                       <td className="px-4 py-3">
                         {c.is_suspended ? (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-900">

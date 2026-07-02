@@ -87,7 +87,7 @@ export function MemberIdPage({ role }: { role: UserRole }) {
       await downloadElementAsPng(element, `itnb-id-card-${side}-${studentId}.png`)
       toast.success("ID card saved", `Downloaded the ${side} side as PNG.`)
     } catch (error) {
-      toast.error("Download failed", getUserFriendlyError(error, "generic"))
+      toast.error("Download failed", getUserFriendlyError(error, "image-download"))
     } finally {
       setDownloading(false)
     }

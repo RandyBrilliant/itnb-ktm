@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Link, useLocation } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 import type { UserRole } from "@/types/auth"
 import { getRoleNavigation } from "@/lib/role-navigation"
 import { useAuth } from "@/hooks/use-auth"
@@ -135,10 +136,15 @@ function SidebarNav({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-[#1a1c1c]">{displayName}</p>
-            <p className="truncate text-[11px] font-medium text-[#8a8a8a]">
-              {user?.department || user?.email || role.toLowerCase()}
-            </p>
+            <PersonNameBlock
+              name={displayName}
+              institutionalId={user?.institutional_id}
+              role={user?.role ?? role}
+              subtitle={user?.department || user?.email || role.toLowerCase()}
+              nameClassName="truncate text-sm font-bold text-[#1a1c1c]"
+              institutionalIdClassName="truncate text-[11px] font-mono font-medium text-[#5f5e5e]"
+              subtitleClassName="truncate text-[11px] font-medium text-[#8a8a8a]"
+            />
           </div>
         </div>
 

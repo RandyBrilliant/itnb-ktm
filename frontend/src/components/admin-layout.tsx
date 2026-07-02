@@ -19,7 +19,7 @@ export function AdminLayout() {
             <div className="flex items-center gap-4">
               <img src="/img/logo-single.png" alt="IT&B logo" className="h-8 w-8 object-contain" />
               <p className="text-[10px] uppercase tracking-[0.14em] text-[#5f5e5e]">
-                © IT&B University. Academic Excellence. Professional Integrity.
+                © Institut Bisnis IT&amp;B, Where Your Future Begins
               </p>
             </div>
             <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-[0.14em] text-[#5f5e5e]">

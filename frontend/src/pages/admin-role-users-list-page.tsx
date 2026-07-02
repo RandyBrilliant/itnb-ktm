@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom"
 import { Edit2, Plus, Search, Check, X } from "lucide-react"
 import { useUsersQuery } from "@/hooks/use-users-query"
 import { ActiveStatusBadge } from "@/components/admin/active-status-badge"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 import {
   DIRECTORY_ROLE_LABELS,
   directoryRoleToSegment,
@@ -85,10 +86,12 @@ export function AdminRoleUsersListPage() {
                 {usersData.results.map((user) => (
                   <tr key={user.id} className="transition-colors hover:bg-[#f9f9f9]">
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-[#1a1c1c]">{user.full_name || "N/A"}</p>
-                        <p className="text-sm text-[#5f5e5e]">{user.email}</p>
-                      </div>
+                      <PersonNameBlock
+                        name={user.full_name || "N/A"}
+                        institutionalId={user.institutional_id}
+                        role={user.role}
+                        subtitle={user.email}
+                      />
                     </td>
                     {role !== "ADMIN" ? (
                       <td className="px-6 py-4 text-sm text-[#1a1c1c]">{user.department || "—"}</td>

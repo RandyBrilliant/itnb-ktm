@@ -10,8 +10,8 @@ from pathlib import Path
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -73,6 +73,7 @@ from .services.qr_generation import generate_qr_code, save_qr_to_bytes
 from .services.email_verification import create_and_send_verification_code
 from .services.email_delivery import EmailDeliveryError, ensure_outbound_email_configured, send_transactional_email
 from .placeholder_email import user_requires_email_setup
+from .services.password_reset import send_password_reset_email_to_user
 from .services.student_import import build_student_import_workbook, parse_student_import_xlsx
 from .services.student_photo_import import extract_photo_entries, normalize_avatar
 from .services.card_generation import (
@@ -434,21 +435,8 @@ class ForgotPasswordRequestView(APIView):
         user = CustomUser.objects.filter(email__iexact=email, is_active=True).first()
 
         if user:
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
-            reset_url = f"{base_url}/reset-password?uid={uid}&token={token}"
-
             try:
-                send_transactional_email(
-                    to_email=user.email,
-                    subject="ITNB Hub Password Reset",
-                    message=(
-                        "We received a request to reset your password.\n\n"
-                        f"Use this link to set a new password:\n{reset_url}\n\n"
-                        "If you did not request this, you can ignore this email."
-                    ),
-                )
+                send_password_reset_email_to_user(user)
             except EmailDeliveryError:
                 logger.exception("Failed to send password reset email to %s", user.email)
                 return Response(
@@ -730,6 +718,113 @@ class UserViewSet(viewsets.ModelViewSet):
             success_response(
                 data=UserDetailSerializer(user).data,
                 detail=ApiMessage.ACTIVATED,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="send-password-reset")
+    def send_password_reset(self, request, pk=None):
+        """Send a password reset link to the user's email (admin only)."""
+        user = self.get_object()
+
+        if not user.is_active:
+            return Response(
+                error_response(
+                    detail="Cannot send a password reset email to an inactive account.",
+                    code=ApiCode.VALIDATION_ERROR,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user_requires_email_setup(user):
+            return Response(
+                error_response(
+                    detail="This user must set a real email address before a password reset can be sent.",
+                    code=ApiCode.VALIDATION_ERROR,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            ensure_outbound_email_configured()
+        except EmailDeliveryError:
+            logger.exception("Email delivery is not configured for admin password reset")
+            return Response(
+                error_response(
+                    detail="Could not send password reset email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            send_password_reset_email_to_user(user)
+        except EmailDeliveryError:
+            logger.exception("Failed to send admin-triggered password reset to %s", user.email)
+            return Response(
+                error_response(
+                    detail="Could not send password reset email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            success_response(
+                detail=f"A password reset link has been sent to {user.email}.",
+                code=ApiCode.EMAIL_SENT,
+            ),
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="send-email-verification")
+    def send_email_verification(self, request, pk=None):
+        """Send an email verification code to the user's current email (admin only)."""
+        user = self.get_object()
+
+        if user_requires_email_setup(user):
+            return Response(
+                error_response(
+                    detail="This user must set a real email address before verification can be sent.",
+                    code=ApiCode.VALIDATION_ERROR,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user.email_verified:
+            return Response(
+                error_response(
+                    detail=ApiMessage.EMAIL_ALREADY_VERIFIED,
+                    code=ApiCode.EMAIL_ALREADY_VERIFIED,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            create_and_send_verification_code(user)
+        except EmailDeliveryError:
+            logger.exception("Failed to send admin-triggered verification email to %s", user.email)
+            return Response(
+                error_response(
+                    detail="Could not send verification email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except Exception:
+            logger.exception("Failed to send admin-triggered verification email to %s", user.email)
+            return Response(
+                error_response(
+                    detail="Could not send verification email. Please try again later.",
+                    code=ApiCode.INTERNAL_ERROR,
+                ),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(
+            success_response(
+                detail=f"A verification code has been sent to {user.email}.",
+                code=ApiCode.EMAIL_SENT,
             ),
             status=status.HTTP_200_OK,
         )

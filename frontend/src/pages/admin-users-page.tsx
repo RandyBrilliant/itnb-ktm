@@ -7,6 +7,7 @@ import {
   importStudentPhotosFromZip,
 } from "@/api/users"
 import { ActiveStatusBadge } from "@/components/admin/active-status-badge"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { Search, Check, X, Download, Upload, Pencil, Image as ImageIcon } from "lucide-react"
@@ -272,9 +273,6 @@ export function AdminUsersPage() {
                     Department
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-[#1a1c1c]">
-                    Inst. ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-[#1a1c1c]">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-[#1a1c1c]">
@@ -289,12 +287,12 @@ export function AdminUsersPage() {
                 {usersData.results.map((user) => (
                   <tr key={user.id} className="transition-colors hover:bg-[#f9f9f9]">
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-[#1a1c1c]">
-                          {user.full_name || "N/A"}
-                        </p>
-                        <p className="text-sm text-[#5f5e5e]">{user.email}</p>
-                      </div>
+                      <PersonNameBlock
+                        name={user.full_name || "N/A"}
+                        institutionalId={user.institutional_id}
+                        role={user.role}
+                        subtitle={user.email}
+                      />
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center rounded-full bg-[#af0f24]/10 px-3 py-1 text-sm font-medium text-[#af0f24]">
@@ -303,9 +301,6 @@ export function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-[#1a1c1c]">
                       {user.department || "—"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#1a1c1c]">
-                      {user.institutional_id || "—"}
                     </td>
                     <td className="px-6 py-4">
                       <ActiveStatusBadge isActive={user.is_active} />

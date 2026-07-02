@@ -156,6 +156,22 @@ export async function deactivateUser(id: number): Promise<User> {
   return unwrapApiData(data, "Failed to deactivate user")
 }
 
+/**
+ * POST /api/users/{id}/send-password-reset/ - Send password reset email (admin)
+ */
+export async function sendUserPasswordReset(id: number): Promise<string> {
+  const { data } = await api.post<ApiSuccessResponse<null>>(`/api/users/${id}/send-password-reset/`)
+  return data.detail ?? "Password reset email sent."
+}
+
+/**
+ * POST /api/users/{id}/send-email-verification/ - Send email verification (admin)
+ */
+export async function sendUserEmailVerification(id: number): Promise<string> {
+  const { data } = await api.post<ApiSuccessResponse<null>>(`/api/users/${id}/send-email-verification/`)
+  return data.detail ?? "Verification email sent."
+}
+
 export interface StudentImportResult {
   created: number
   skipped: number

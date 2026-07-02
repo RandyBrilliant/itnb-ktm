@@ -15,6 +15,9 @@ import base64
 import hashlib
 import hmac
 import time
+from urllib.parse import urlencode
+
+from django.conf import settings
 
 TOKEN_STEP_SECONDS = 30
 TOKEN_LENGTH = 8
@@ -60,3 +63,12 @@ def seconds_until_next_window(ts: float | None = None) -> int:
     """Seconds remaining before the current token rotates (for UI countdown)."""
     now = ts if ts is not None else time.time()
     return int(TOKEN_STEP_SECONDS - (now % TOKEN_STEP_SECONDS))
+
+
+def build_attendance_scan_url(webinar_id: int, phase: str, token: str) -> str:
+    """Deep link opened when a student scans the attendance QR code."""
+    if phase not in VALID_PHASES:
+        raise ValueError(f"Invalid phase: {phase}")
+    base = settings.FRONTEND_URL.rstrip("/")
+    query = urlencode({"token": token, "phase": phase})
+    return f"{base}/webinars/{webinar_id}/attend?{query}"

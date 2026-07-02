@@ -46,6 +46,7 @@ from main.services.certificate_issuance import issue_program_certificate
 from main.services.webinar_attendance import (
     TOKEN_STEP_SECONDS,
     VALID_PHASES,
+    build_attendance_scan_url,
     generate_attendance_token,
     seconds_until_next_window,
     verify_attendance_token,
@@ -791,7 +792,7 @@ class WebinarViewSet(viewsets.ModelViewSet):
             phase = "in"
 
         token = generate_attendance_token(webinar.attendance_secret, phase)
-        payload = f"WEBINAR:{webinar.id}:{phase}:{token}"
+        payload = build_attendance_scan_url(webinar.id, phase, token)
         qr_bytes = save_qr_to_bytes(generate_qr_code(payload))
         qr_data_url = "data:image/png;base64," + base64.b64encode(qr_bytes.getvalue()).decode()
 
@@ -801,6 +802,7 @@ class WebinarViewSet(viewsets.ModelViewSet):
                     "token": token,
                     "phase": phase,
                     "payload": payload,
+                    "attendance_url": payload,
                     "qr_data_url": qr_data_url,
                     "step_seconds": TOKEN_STEP_SECONDS,
                     "expires_in": seconds_until_next_window(),

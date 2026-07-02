@@ -9,6 +9,7 @@ import {
   listWebinarRegistrations,
 } from "@/api/webinars"
 import { formatAppDateTime } from "@/lib/datetime"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 
@@ -70,8 +71,7 @@ export function AdminWebinarAttendancePage() {
           {webinar?.post.title ?? "Attendance"}
         </h1>
         <p className="mt-1 text-sm text-[#5f5e5e]">
-          The attendance QR appears 30 minutes before the webinar starts. Attendees scan the rotating code to{" "}
-          {phase === "in" ? "check in" : "check out"}.
+          The attendance QR opens a check-in link on the attendee's phone. They sign in if needed, then attendance is recorded automatically. The manual code below is a fallback.
         </p>
       </div>
 
@@ -169,8 +169,14 @@ export function AdminWebinarAttendancePage() {
                   {participants.results.map((reg) => (
                     <tr key={reg.id}>
                       <td className="py-2">
-                        <p className="font-medium text-[#1a1c1c]">{reg.user.full_name || reg.user.email}</p>
-                        <p className="text-xs text-[#8a8989]">{reg.user.institutional_id || reg.user.email}</p>
+                        <PersonNameBlock
+                          name={reg.user.full_name || reg.user.email}
+                          institutionalId={reg.user.institutional_id}
+                          role={reg.user.role}
+                          subtitle={reg.user.email}
+                          institutionalIdClassName="text-xs font-mono text-[#8a8989]"
+                          subtitleClassName="text-xs text-[#8a8989]"
+                        />
                       </td>
                       <td className="py-2 text-[#5f5e5e]">{formatTime(reg.checked_in_at)}</td>
                       <td className="py-2">

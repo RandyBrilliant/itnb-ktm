@@ -7,6 +7,7 @@ type ErrorContext =
   | "logout"
   | "user-status"
   | "scores"
+  | "image-download"
   | "generic"
 
 interface ApiErrorShape {
@@ -62,8 +63,21 @@ export function getUserFriendlyError(
   const rawMessage = detail || fieldError || error.message || ""
   const normalized = rawMessage.toLowerCase()
 
-  if (status == null || normalized.includes("network error")) {
+  const isLikelyNetworkError =
+    !error.response &&
+    (normalized.includes("network error") ||
+      normalized.includes("failed to fetch") ||
+      (error instanceof TypeError && normalized.includes("fetch")))
+
+  if (isLikelyNetworkError) {
     return "Unable to connect to the server. Please check your internet connection and try again."
+  }
+
+  if (context === "image-download") {
+    if (normalized.includes("tainted") || normalized.includes("todataurl")) {
+      return "Could not export the image because one of the card images blocked capture. Please refresh and try again."
+    }
+    return rawMessage || "Could not save the image. Please try again."
   }
 
   if (status >= 500) {

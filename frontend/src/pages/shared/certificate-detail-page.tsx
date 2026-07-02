@@ -8,6 +8,7 @@ import { getRoleBasePath } from "@/lib/role-path"
 import { formatAppDate } from "@/lib/datetime"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 import { toast } from "@/lib/toast"
 
 function formatDate(value?: string | null) {
@@ -70,6 +71,14 @@ export function CertificateDetailPage({ role }: { role: UserRole }) {
 
             <div className="rounded-2xl border border-[#ececec] bg-white p-5">
               <h1 className="text-2xl font-extrabold text-[#1a1c1c]">{data.title}</h1>
+              <PersonNameBlock
+                className="mt-2"
+                name={data.recipient_name || data.user?.full_name || "—"}
+                institutionalId={data.recipient_id_display || data.user?.institutional_id}
+                role={data.user?.role}
+                nameClassName="text-sm font-semibold text-[#3b3b3b]"
+                institutionalIdClassName="text-xs font-mono text-[#5f5e5e]"
+              />
               <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-[#3b3b3b]">
                 {data.description || "Official academic certificate"}
               </p>

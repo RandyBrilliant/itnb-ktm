@@ -80,7 +80,7 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
   return (
     <article className="overflow-hidden rounded-2xl border border-[#ececec] bg-white shadow-sm">
       {image ? (
-        <div className="aspect-video w-full overflow-hidden bg-[#f0f0f0]">
+        <div className="aspect-[4/5] w-full overflow-hidden bg-[#f0f0f0]">
           <img src={image} alt={webinar.post.title} className="h-full w-full object-cover" />
         </div>
       ) : null}
@@ -204,8 +204,8 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
           <div className="space-y-3 rounded-lg border border-[#ececec] bg-[#fafafa] p-4">
             <p className="text-xs font-semibold text-[#1a1c1c]">
               {attendancePhase === "in"
-                ? "Enter the code shown on the attendance screen (or scan the QR)."
-                : "Enter the check-out code shown on the attendance screen."}
+                ? "Scan the QR on the attendance screen to check in, or enter the code manually."
+                : "Scan the QR on the attendance screen to check out, or enter the code manually."}
             </p>
             <div className="flex flex-wrap gap-2">
               <input
@@ -273,7 +273,7 @@ export function WebinarsListSection({ role }: { role: UserRole }) {
       <section className="space-y-6">
         {isLoading ? (
           <div className="space-y-4">
-            <div className="aspect-video animate-pulse rounded-2xl bg-[#ececec]" />
+            <div className="aspect-[4/5] animate-pulse rounded-2xl bg-[#ececec]" />
           </div>
         ) : webinars.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#e4beba] bg-white px-6 py-12 text-center">

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getWebinar, updateWebinar } from "@/api/webinars"
 import { WebinarForm } from "@/components/admin/webinar-form"
 import { resolveMediaUrl } from "@/lib/media-url"
@@ -9,6 +9,7 @@ import { getUserFriendlyError } from "@/lib/error-message"
 
 export function AdminWebinarEditPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const webinarId = Number(id)
 
@@ -61,6 +62,8 @@ export function AdminWebinarEditPage() {
         onSubmit={async (payload) => {
           try {
             await updateWebinar(webinarId, payload)
+            await queryClient.invalidateQueries({ queryKey: ["admin-webinars"] })
+            await queryClient.invalidateQueries({ queryKey: ["admin-webinar", webinarId] })
             toast.success("Webinar updated")
             navigate("/admin/webinars", { replace: true })
           } catch (error) {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from django.utils import timezone
 
+from main.models import CertificateProgram, CertificateProgramBatchStatus, Webinar
 from main.services.certificate_layout import normalize_certificate_layout
 
 

@@ -140,43 +140,42 @@ function CardFrontContent({
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col justify-evenly px-[4.5cqw] py-[1.5cqh]">
+      <div className="flex flex-col gap-[1.1cqh] px-[4.5cqw] py-[1.5cqh]">
         <CardField label="Name" value={data.name} variant="name" />
         <CardField label="Student ID" value={data.studentId} />
         <CardField label="Major" value={data.major} />
         <CardField label="Place, Date of Birth" value={data.birthPlaceDate} />
       </div>
 
-      <div className="shrink-0">
-        <div className="mx-[4.5cqw] border-t border-[#212121]/25" aria-hidden />
-        <div className="flex items-end justify-between gap-[2cqw] px-[4.5cqw] pt-[0.45cqh]">
-          <div className="min-w-0 flex-1">
-            <p className="break-words text-[clamp(0.8rem,4.6cqw,1.12rem)] font-extrabold leading-tight text-[#b11324]">
-              {data.degree}
-            </p>
-            <div className="mt-[1cqh]">
-              <p className="text-[clamp(0.52rem,2.65cqw,0.72rem)] font-semibold leading-none text-[#b11324]">
-                Valid Thru
-              </p>
-              <p className="mt-[0.5cqh] text-[clamp(0.68rem,3.45cqw,0.92rem)] font-semibold leading-snug text-[#212121]">
-                {data.validThru}
-              </p>
-            </div>
-          </div>
+      <div className="mx-[4.5cqw] border-t border-[#212121]/25" aria-hidden />
 
-          <div className="aspect-square h-[18.5cqh] shrink-0 overflow-hidden rounded-[10px] border-[3px] border-[#8f2634] bg-white">
-            {data.qrImageUrl ? (
-              <img
-                src={data.qrImageUrl}
-                alt="ID QR code"
-                className="h-full w-full object-contain p-[2px]"
-              />
-            ) : (
-              <span className="material-symbols-outlined flex h-full w-full items-center justify-center text-[clamp(1.2rem,7cqw,2.1rem)] text-black">
-                qr_code_2
-              </span>
-            )}
+      <div className="flex items-start justify-between gap-[2.5cqw] px-[4.5cqw] pt-[1.2cqh]">
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-[clamp(0.8rem,4.6cqw,1.12rem)] font-extrabold leading-tight text-[#b11324]">
+            {data.degree}
+          </p>
+          <div className="mt-[0.8cqh]">
+            <p className="text-[clamp(0.52rem,2.65cqw,0.72rem)] font-semibold leading-none text-[#b11324]">
+              Valid Thru
+            </p>
+            <p className="mt-[0.5cqh] text-[clamp(0.68rem,3.45cqw,0.92rem)] font-semibold leading-snug text-[#212121]">
+              {data.validThru}
+            </p>
           </div>
+        </div>
+
+        <div className="aspect-square h-[17cqh] shrink-0 overflow-hidden rounded-[8px] border-[3px] border-[#8f2634] bg-white">
+          {data.qrImageUrl ? (
+            <img
+              src={data.qrImageUrl}
+              alt="ID QR code"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="material-symbols-outlined flex h-full w-full items-center justify-center text-[clamp(1.2rem,7cqw,2.1rem)] text-black">
+              qr_code_2
+            </span>
+          )}
         </div>
       </div>
     </div>

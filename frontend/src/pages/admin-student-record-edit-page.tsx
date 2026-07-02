@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getUser, updateUser } from "@/api/users"
 import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
 import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
+import { AdminUserEmailActionsCard } from "@/components/admin/admin-user-email-actions-card"
 import { StudentDepartmentSelect } from "@/components/form/student-department-select"
 import { DatePickerField } from "@/components/ui/date-picker-field"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
@@ -270,7 +271,13 @@ export function AdminStudentRecordEditPage() {
         </div>
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-4">
+          <AdminUserEmailActionsCard
+            user={user}
+            onActionSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["admin-student-record-edit", userId] })
+            }}
+          />
           <UserAccountMetadata user={user} title="Record Details" />
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { ImagePlus, Upload, X } from "lucide-react"
 import { ImageSpecGuidelines } from "@/components/content/image-spec-guidelines"
+import { COVER_IMAGE_SPEC, type CoverImageSpec } from "@/lib/media-guidelines"
 import { ImageCropModal } from "@/components/ui/image-crop-modal"
 
 export interface ImageUploadFieldProps {
@@ -19,6 +20,8 @@ export interface ImageUploadFieldProps {
   cropAspect?: number
   /** Show pixel/aspect guidelines for admins (defaults to true when enableCrop is on). */
   showCoverGuidelines?: boolean
+  /** Guidelines copy shown when showCoverGuidelines is on (defaults to 16∶9 news/benefits spec). */
+  imageSpec?: CoverImageSpec
   /** Optional class for the preview image element. */
   previewClassName?: string
 }
@@ -37,6 +40,7 @@ export function ImageUploadField({
   enableCrop = false,
   cropAspect,
   showCoverGuidelines: showCoverGuidelinesProp,
+  imageSpec = COVER_IMAGE_SPEC,
   previewClassName = "h-40 w-full rounded-sm border border-[#e2e2e2] object-cover",
 }: ImageUploadFieldProps) {
   const showCoverGuidelines = showCoverGuidelinesProp ?? enableCrop
@@ -114,7 +118,7 @@ export function ImageUploadField({
   return (
     <div className="space-y-2">
       <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">{label}</span>
-      {showCoverGuidelines ? <ImageSpecGuidelines /> : null}
+      {showCoverGuidelines ? <ImageSpecGuidelines spec={imageSpec} /> : null}
 
       <div
         onDragOver={(event) => event.preventDefault()}

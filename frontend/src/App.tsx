@@ -62,6 +62,9 @@ const AdminCertificateProgramDetailPage = lazy(() =>
 const VerifyCardPage = lazy(() =>
   import("@/pages/verify-card-page").then((m) => ({ default: m.VerifyCardPage }))
 )
+const WebinarAttendPage = lazy(() =>
+  import("@/pages/webinar-attend-page").then((m) => ({ default: m.WebinarAttendPage }))
+)
 const StudentEmailSetupPage = lazy(() =>
   import("@/pages/student-email-setup-page").then((m) => ({ default: m.StudentEmailSetupPage }))
 )
@@ -106,6 +109,14 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-card/:cardNumber" element={<VerifyCardPage />} />
+            <Route
+              path="/webinars/:id/attend"
+              element={
+                <ProtectedRoute>
+                  <WebinarAttendPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin Routes */}
             <Route

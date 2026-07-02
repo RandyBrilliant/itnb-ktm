@@ -16,6 +16,7 @@ import { formatAppDateTime } from "@/lib/datetime"
 import { formatBirthDate } from "@/lib/format-birth"
 import { formatUserEmailLabel, requiresEmailSetup } from "@/lib/email-setup"
 import { toast } from "@/lib/toast"
+import { PersonNameBlock } from "@/components/profile/person-name-block"
 
 type EmailMode = "view" | "verify" | "change" | "change-verify"
 
@@ -203,8 +204,17 @@ export function StudentReadOnlyProfile({ user, changePasswordHref }: StudentRead
         <div className="mt-8">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#af0f24]">Personal Information</p>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ReadOnlyField label="Full Name" value={user.full_name || "—"} />
-            <ReadOnlyField label="Official ID (NIM)" value={user.institutional_id || "—"} />
+            <div className="sm:col-span-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#5f5e5e]">Full Name</p>
+              <PersonNameBlock
+                className="mt-1.5"
+                name={user.full_name || "—"}
+                institutionalId={user.institutional_id}
+                role={user.role}
+                nameClassName="text-sm font-semibold text-[#1a1c1c]"
+                institutionalIdClassName="text-sm font-mono text-[#1a1c1c]"
+              />
+            </div>
             <ReadOnlyField label="Department" value={user.department || "—"} />
             <ReadOnlyField label="Place of Birth" value={user.place_of_birth || "—"} />
             <ReadOnlyField label="Date of Birth" value={formatBirthDate(user.date_of_birth)} />

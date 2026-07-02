@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
@@ -7,12 +7,15 @@ import { AuthBrandPanel } from "@/components/auth/auth-brand-panel"
 import { LoginCard } from "@/components/auth/login-card"
 import { AnimatedPage } from "@/components/animation/animated-page"
 import { getPostLoginRoute } from "@/lib/email-setup"
+import { resolveSafeNextPath } from "@/lib/webinar-attendance"
 
 /**
  * Login page for admin/staff/lecturer
  */
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const nextPath = resolveSafeNextPath(searchParams.get("next"))
   const { login, logout, isLoading } = useAuth()
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
@@ -37,7 +40,7 @@ export function LoginPage() {
         return
       }
       toast.success("Login successful", "Redirecting to dashboard...")
-      navigate(getPostLoginRoute(user), { replace: true })
+      navigate(nextPath ?? getPostLoginRoute(user), { replace: true })
     } catch (err: unknown) {
       const errorMessage = getUserFriendlyError(err, "login")
       setPassword("")

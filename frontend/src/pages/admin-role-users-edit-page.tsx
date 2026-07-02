@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getUser, updateUser } from "@/api/users"
 import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
 import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
+import { AdminUserEmailActionsCard } from "@/components/admin/admin-user-email-actions-card"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { toast } from "@/lib/toast"
@@ -251,7 +252,13 @@ export function AdminRoleUsersEditPage() {
         </div>
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-4">
+          <AdminUserEmailActionsCard
+            user={user}
+            onActionSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["admin-user-edit", userId] })
+            }}
+          />
           <UserAccountMetadata user={user} title="Record Details" />
         </div>
       </div>

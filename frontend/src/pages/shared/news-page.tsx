@@ -51,12 +51,13 @@ export function NewsPage({ role }: { role: UserRole }) {
           <div className="space-y-5">
             {posts.map((post) => {
               const image = resolveMediaUrl(post.image) || post.image_url || ""
+              const imageAspectClass = post.webinar ? "aspect-[4/5]" : "aspect-video"
               return (
                 <article
                   key={post.id}
                   className="group overflow-hidden rounded-2xl border border-[#ececec] bg-white shadow-sm transition hover:border-[#e0d5d3] hover:shadow-md"
                 >
-                  <div className="relative aspect-video w-full overflow-hidden bg-[#f0f0f0]">
+                  <div className={`relative ${imageAspectClass} w-full overflow-hidden bg-[#f0f0f0]`}>
                     {image ? (
                       <img
                         src={image}
