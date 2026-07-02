@@ -3,6 +3,7 @@ import type { UserRole } from "@/types/auth"
 import { useRoleDashboard } from "@/hooks/use-role-dashboard"
 import { RoleShell } from "@/components/navigation/role-shell"
 import { AnimatedPage } from "@/components/animation/animated-page"
+import { GpaTrendChart } from "@/components/academic/gpa-trend-chart"
 import { motion } from "framer-motion"
 import { resolveMediaUrl } from "@/lib/media-url"
 import { getRoleBasePath } from "@/lib/role-path"
@@ -40,7 +41,7 @@ function sortLatestPosts(posts: PostItem[]) {
 }
 
 export function RoleDashboard({ role }: { role: UserRole }) {
-  const { isBootLoading, isDataLoading, me, posts, stats } = useRoleDashboard(role)
+  const { isBootLoading, isDataLoading, me, posts, stats, semesterGpa } = useRoleDashboard(role)
   const basePath = getRoleBasePath(role)
 
   if (isBootLoading) {
@@ -116,6 +117,35 @@ export function RoleDashboard({ role }: { role: UserRole }) {
             </p>
           </motion.div>
         </section>
+
+        {role === "STUDENT" && semesterGpa.length > 0 ? (
+          <section className="mb-8">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-6 w-1 bg-[#af0f24]" />
+                <h2 className="text-sm font-black uppercase tracking-tight">GPA Trend</h2>
+              </div>
+              <Link
+                to={`${basePath}/scores`}
+                className="text-[10px] font-bold uppercase text-[#af0f24] hover:underline"
+              >
+                View scores
+              </Link>
+            </div>
+            <motion.div
+              className="rounded-2xl bg-white p-5 shadow-[0px_6px_28px_rgba(175,15,36,0.05)]"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: 0.12 }}
+            >
+              {isDataLoading ? (
+                <div className="h-44 animate-pulse rounded-xl bg-[#f3f3f3]" />
+              ) : (
+                <GpaTrendChart data={semesterGpa} compact />
+              )}
+            </motion.div>
+          </section>
+        ) : null}
 
         <section className="mb-8">
           <div className="mb-4 flex items-center justify-between gap-3">

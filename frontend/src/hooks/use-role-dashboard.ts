@@ -54,6 +54,7 @@ export function useRoleDashboard(role: UserRole) {
     const posts = postQuery.data?.results ?? []
     const benefits = benefitQuery.data?.results ?? []
     const gpaSummary = academicQuery.data?.summary
+    const semesterGpa = academicQuery.data?.semester_gpa ?? []
 
     const studentGpaHint = gpaSummary?.student_major
       ? [gpaSummary.student_major, gpaSummary.student_year].filter(Boolean).join(" · ")
@@ -119,6 +120,7 @@ export function useRoleDashboard(role: UserRole) {
       benefitsCount: benefits.length,
       certificatesCount: certificates.length,
       activeCertificates,
+      semesterGpa,
     }
   }, [role, certQuery.data, eventQuery.data, postQuery.data, benefitQuery.data, academicQuery.data, academicQuery.isLoading])
 

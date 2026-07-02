@@ -72,8 +72,8 @@ export function CertificatesListSection({ role }: { role: UserRole }) {
                         studentId={cert.recipient_id_display || cert.user?.institutional_id || ""}
                       />
                     </div>
-                  ) : cert.image_url ? (
-                    <img src={cert.image_url} alt={cert.title} className="h-44 w-full object-cover" />
+                  ) : resolveMediaUrl(cert.image_url) ? (
+                    <img src={resolveMediaUrl(cert.image_url)} alt={cert.title} className="h-44 w-full object-cover" />
                   ) : null}
                   <div className="p-4 sm:p-5">
                     <div className="flex items-start justify-between gap-3">

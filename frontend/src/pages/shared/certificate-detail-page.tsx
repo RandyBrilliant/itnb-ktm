@@ -64,8 +64,8 @@ export function CertificateDetailPage({ role }: { role: UserRole }) {
                   Your personalized certificate
                 </p>
               </div>
-            ) : data.image_url ? (
-              <img src={data.image_url} alt={data.title} className="mx-auto max-h-96 w-full rounded-xl object-contain" />
+            ) : resolveMediaUrl(data.image_url) ? (
+              <img src={resolveMediaUrl(data.image_url)} alt={data.title} className="mx-auto max-h-96 w-full rounded-xl object-contain" />
             ) : null}
 
             <div className="rounded-2xl border border-[#ececec] bg-white p-5">

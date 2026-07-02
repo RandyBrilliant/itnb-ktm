@@ -118,6 +118,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "role",
+            "email",
+            "email_verified",
+            "institutional_id",
             "is_active",
             "is_staff",
             "is_superuser",

@@ -21,7 +21,6 @@ from account.permissions import (
     CanManageBenefits,
     CanPostNews,
     IsAuthenticatedOrReadOnly,
-    IsBackofficeRole,
     user_can_manage_benefits,
 )
 from account.models import UserRole
@@ -51,6 +50,7 @@ from main.services.webinar_attendance import (
     seconds_until_next_window,
     verify_attendance_token,
 )
+from main.services.webinar_export import build_webinar_participants_workbook
 from main.services.webinar_schedule import (
     attendance_qr_available,
     attendance_qr_opens_at,
@@ -70,6 +70,7 @@ from main.serializers import (
     CertificateProgramCreateSerializer,
     CertificateProgramSerializer,
     CertificateSerializer,
+    CertificateUpdateSerializer,
     EventSerializer,
     PostCreateUpdateSerializer,
     PostSerializer,
@@ -109,13 +110,13 @@ class CertificateViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "create":
             return CertificateCreateSerializer
+        if self.action in ("update", "partial_update"):
+            return CertificateUpdateSerializer
         return CertificateSerializer
 
     def get_permissions(self):
-        if self.action == "create":
+        if self.action in ("create", "destroy", "update", "partial_update"):
             permission_classes = [CanIssueCertificates]
-        elif self.action in ["destroy", "update", "partial_update"]:
-            permission_classes = [IsBackofficeRole]
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
@@ -346,8 +347,13 @@ class CertificateProgramViewSet(
 class BenefitCategoryViewSet(viewsets.ModelViewSet):
     queryset = BenefitCategory.objects.all()
     serializer_class = BenefitCategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, CanManageBenefits]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = StandardResultsSetPagination
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [CanManageBenefits()]
+        return [IsAuthenticatedOrReadOnly()]
 
 
 class BenefitViewSet(viewsets.ModelViewSet):
@@ -390,7 +396,8 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         base = Post.objects.select_related("author", "webinar", "webinar__certificate_program")
-        if self.request.user.role in (UserRole.STAFF, UserRole.ADMIN):
+        user = self.request.user
+        if user.is_authenticated and user.role in (UserRole.STAFF, UserRole.ADMIN):
             return base.all()
         return base.filter(is_published=True)
 
@@ -472,7 +479,8 @@ class EventViewSet(viewsets.ModelViewSet):
     ordering = ["event_date"]
 
     def get_queryset(self):
-        if self.request.user.role in (UserRole.STAFF, UserRole.ADMIN):
+        user = self.request.user
+        if user.is_authenticated and user.role in (UserRole.STAFF, UserRole.ADMIN):
             return Event.objects.select_related("post", "post__author").all()
         return Event.objects.select_related("post", "post__author").filter(post__is_published=True)
 
@@ -485,12 +493,17 @@ class EventViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def rsvp(self, request, pk=None):
-        event = self.get_object()
-        if event.capacity and event.rsvp_count >= event.capacity:
-            return Response(error_response(detail="Event is at capacity."), status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            event = Event.objects.select_for_update().get(pk=self.get_object().pk)
+            if event.capacity is not None and event.rsvp_count >= event.capacity:
+                return Response(
+                    error_response(detail="Event is at capacity."),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        event.rsvp_count += 1
-        event.save()
+            event.rsvp_count += 1
+            event.save(update_fields=["rsvp_count"])
+
         return Response(
             success_response(
                 data=EventSerializer(event).data,
@@ -600,36 +613,62 @@ class WebinarViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if existing and existing.status == WebinarRegistrationStatus.REGISTERED:
+        with transaction.atomic():
+            locked_webinar = Webinar.objects.select_for_update().get(pk=webinar.pk)
+
+            if not locked_webinar.is_registration_open:
+                return Response(
+                    error_response(detail="Registration is not open for this webinar."),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            existing = WebinarRegistration.objects.filter(
+                webinar=locked_webinar, user=request.user
+            ).first()
+
+            if existing and existing.status == WebinarRegistrationStatus.REGISTERED:
+                return Response(
+                    success_response(
+                        data=WebinarSerializer(
+                            locked_webinar, context=self.get_serializer_context()
+                        ).data,
+                        detail="You are already registered.",
+                        code=ApiCode.SUCCESS,
+                    ),
+                    status=status.HTTP_200_OK,
+                )
+
+            registered_count = locked_webinar.registrations.filter(
+                status=WebinarRegistrationStatus.REGISTERED
+            ).count()
+            if locked_webinar.capacity and registered_count >= locked_webinar.capacity:
+                target = WebinarRegistrationStatus.WAITLISTED
+            else:
+                target = WebinarRegistrationStatus.REGISTERED
+
+            if existing:
+                existing.status = target
+                existing.save(update_fields=["status", "updated_at"])
+            else:
+                WebinarRegistration.objects.create(
+                    webinar=locked_webinar, user=request.user, status=target
+                )
+
+            detail = (
+                "Added to the waitlist."
+                if target == WebinarRegistrationStatus.WAITLISTED
+                else "Registered."
+            )
             return Response(
                 success_response(
-                    data=WebinarSerializer(webinar, context=self.get_serializer_context()).data,
-                    detail="You are already registered.",
+                    data=WebinarSerializer(
+                        locked_webinar, context=self.get_serializer_context()
+                    ).data,
+                    detail=detail,
                     code=ApiCode.SUCCESS,
                 ),
                 status=status.HTTP_200_OK,
             )
-
-        target = (
-            WebinarRegistrationStatus.WAITLISTED
-            if webinar.is_full
-            else WebinarRegistrationStatus.REGISTERED
-        )
-        if existing:
-            existing.status = target
-            existing.save(update_fields=["status", "updated_at"])
-        else:
-            WebinarRegistration.objects.create(webinar=webinar, user=request.user, status=target)
-
-        detail = "Added to the waitlist." if target == WebinarRegistrationStatus.WAITLISTED else "Registered."
-        return Response(
-            success_response(
-                data=WebinarSerializer(webinar, context=self.get_serializer_context()).data,
-                detail=detail,
-                code=ApiCode.SUCCESS,
-            ),
-            status=status.HTTP_200_OK,
-        )
 
     # -- Student: attendance --------------------------------------------------
 
@@ -663,24 +702,25 @@ class WebinarViewSet(viewsets.ModelViewSet):
         if ":" in raw:  # accept a scanned "WEBINAR:<id>:<phase>:<token>" payload
             raw = raw.split(":")[-1].strip()
 
-        valid = False
-        method = ""
-        if raw:
-            window_ok = (
-                check_in_window_open(webinar, now)
-                if phase == "in"
-                else webinar_session_contains(webinar, now)
+        if not raw:
+            return Response(
+                error_response(detail="Invalid or expired attendance code."),
+                status=status.HTTP_400_BAD_REQUEST,
             )
-            if not window_ok:
-                return Response(
-                    error_response(detail="Invalid or expired attendance code."),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            valid = verify_attendance_token(webinar.attendance_secret, phase, raw)
-            method = "TOKEN"
-        elif webinar.mode in (WebinarMode.ONLINE, WebinarMode.HYBRID):
-            valid = check_in_window_open(webinar, now) if phase == "in" else webinar_session_contains(webinar, now)
-            method = "ONLINE"
+
+        window_ok = (
+            check_in_window_open(webinar, now)
+            if phase == "in"
+            else webinar_session_contains(webinar, now)
+        )
+        if not window_ok:
+            return Response(
+                error_response(detail="Invalid or expired attendance code."),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        valid = verify_attendance_token(webinar.attendance_secret, phase, raw)
+        method = "TOKEN"
 
         if not valid:
             return Response(

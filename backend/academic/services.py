@@ -98,6 +98,54 @@ GROUP BY study.study_id
 ORDER BY semester, subject
 """
 
+SEMESTER_GPA_SQL_TEMPLATE = """
+SELECT
+  profile_subject.semester_no AS semester,
+  ROUND(
+    SUM(study_result.result_weight * study_result.result_credit)
+    / SUM(study_result.result_credit),
+    2
+  ) AS gpa,
+  SUM(study_result.result_credit) AS credits
+FROM study
+LEFT JOIN profile_subject ON
+  (profile_subject.record_id = study.subject_record_id) AND
+  (profile_subject.default_status = 0) AND
+  (profile_subject.void_status = 0) AND
+  (profile_subject.delete_datetime IS NULL)
+LEFT JOIN profile_major ON
+  (profile_major.record_id = study.major_record_id) AND
+  (profile_major.default_status = 0) AND
+  (profile_major.void_status = 0) AND
+  (profile_major.delete_datetime IS NULL)
+LEFT JOIN profile_curicullum ON
+  (profile_curicullum.record_id = study.curicullum_record_id) AND
+  (profile_curicullum.default_status = 0) AND
+  (profile_curicullum.void_status = 0) AND
+  (profile_curicullum.delete_datetime IS NULL)
+LEFT JOIN study_result ON
+  (study_result.study_record_id = study.record_id) AND
+  (study_result.default_status = 0) AND
+  (study_result.void_status = 0) AND
+  (study_result.delete_datetime IS NULL)
+LEFT JOIN profile_student ON
+  (profile_student.record_id = study_result.student_record_id) AND
+  (profile_student.default_status = 0) AND
+  (profile_student.void_status = 0) AND
+  (profile_student.delete_datetime IS NULL)
+WHERE profile_student.student_id = %s
+  AND study.subject_record_id IS NOT NULL
+  AND study.delete_datetime IS NULL
+  AND study.void_status = 0
+  AND study.default_status = 0
+  AND profile_curicullum.record_id IN ({curriculum_placeholders})
+  AND study_result.publish_status = TRUE
+  AND study_result.result_weight <> 0
+  AND study_result.result_grade <> 0
+GROUP BY profile_subject.semester_no
+ORDER BY profile_subject.semester_no
+"""
+
 
 def _parse_curriculum_ids() -> tuple[int, ...]:
     raw = getattr(settings, "MYITNB_CURRICULUM_IDS", "1,23,55") or "1,23,55"
@@ -106,7 +154,10 @@ def _parse_curriculum_ids() -> tuple[int, ...]:
         part = part.strip()
         if not part:
             continue
-        ids.append(int(part))
+        try:
+            ids.append(int(part))
+        except ValueError:
+            continue
     return tuple(ids) if ids else (1, 23, 55)
 
 
@@ -182,6 +233,34 @@ def _fetch_score_list(cursor, student_id: str) -> list[dict[str, Any]]:
     return results
 
 
+def _fetch_semester_gpa(cursor, student_id: str) -> list[dict[str, Any]]:
+    curriculum_ids = _parse_curriculum_ids()
+    placeholders = ", ".join(["%s"] * len(curriculum_ids))
+    sql = SEMESTER_GPA_SQL_TEMPLATE.format(curriculum_placeholders=placeholders)
+    params: list[Any] = [student_id, *curriculum_ids]
+
+    cursor.execute(sql, params)
+    rows = cursor.fetchall()
+
+    results: list[dict[str, Any]] = []
+    for row in rows:
+        data = _row_to_dict(cursor, row)
+        semester = _normalize_semester(data.get("semester"))
+        if semester is None:
+            continue
+        gpa_val = data.get("gpa")
+        credits_val = data.get("credits")
+        results.append(
+            {
+                "semester": semester,
+                "gpa": float(gpa_val) if gpa_val is not None else None,
+                "credits": float(credits_val) if credits_val is not None else None,
+            }
+        )
+    results.sort(key=lambda item: item["semester"])
+    return results
+
+
 def get_gpa_summary(student_id: str) -> dict[str, Any] | None:
     """Return GPA summary for a student_id (NIM), or None if no published results."""
     with myitnb_cursor() as cursor:
@@ -200,6 +279,7 @@ def get_academic_profile(student_id: str) -> dict[str, Any]:
         return {
             "summary": _fetch_gpa_summary(cursor, student_id),
             "scores": _fetch_score_list(cursor, student_id),
+            "semester_gpa": _fetch_semester_gpa(cursor, student_id),
         }
 
 
@@ -208,7 +288,7 @@ def get_academic_profile_resilient(student_id: str) -> dict[str, Any]:
     Fetch academic profile, falling back to the last saved snapshot when the
     external SIS is unreachable.
 
-    Returns the {summary, scores} payload augmented with:
+    Returns the {summary, scores, semester_gpa} payload augmented with:
       - ``stale``: False for live data, True when served from a snapshot.
       - ``synced_at``: ISO timestamp of the snapshot (None for fresh live data).
 

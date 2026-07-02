@@ -6,6 +6,7 @@ type ErrorContext =
   | "change-password"
   | "logout"
   | "user-status"
+  | "scores"
   | "generic"
 
 interface ApiErrorShape {
@@ -110,6 +111,15 @@ export function getUserFriendlyError(
 
   if (context === "user-status") {
     return "Unable to update user status right now. Please try again."
+  }
+
+  if (context === "scores") {
+    if (status === 503) {
+      return "Scores are temporarily unavailable. Please try again later."
+    }
+    if (status === 404) {
+      return "Academic records were not found for your account."
+    }
   }
 
   if (code === "unauthorized" || normalized.includes("authentication required")) {

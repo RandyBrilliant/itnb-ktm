@@ -211,7 +211,7 @@ def build_student_import_workbook() -> io.BytesIO:
             "with their Institutional ID."
         ],
         [f"   Allowed departments: {format_student_department_choices()}."],
-        ["4. Leave Password empty to use each row's Institutional ID as the initial password."],
+        ["4. Password is required for every row and must meet Django password rules."],
         ["5. Graduation year is only used when Record type is ALUMNI."],
         ["6. Save as .xlsx and upload from Admin > Student records."],
     ]

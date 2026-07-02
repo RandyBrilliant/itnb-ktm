@@ -55,7 +55,13 @@ from .permissions import (
     IsAdmin,
     IsBackofficeRole,
 )
-from .throttles import AuthPublicRateThrottle, AuthRateThrottle
+from .throttles import (
+    AuthPublicRateThrottle,
+    AuthRateThrottle,
+    EmailSendRateThrottle,
+    EmailSendUserRateThrottle,
+    EmailVerifyRateThrottle,
+)
 from .api_responses import (
     success_response,
     error_response,
@@ -202,20 +208,30 @@ class StudentImportView(APIView):
 
         for r in rows:
             inst = r["institutional_id"]
-            pwd = r["password"] or inst
-            if r["password"]:
-                try:
-                    validate_password(pwd)
-                except DjangoValidationError as exc:
-                    row_errors.append(
-                        {
-                            "row": r["row"],
-                            "email": r["email"],
-                            "message": "; ".join(exc.messages),
-                        }
-                    )
-                    skipped += 1
-                    continue
+            if not r["password"]:
+                row_errors.append(
+                    {
+                        "row": r["row"],
+                        "email": r["email"],
+                        "message": "Password is required for each imported row.",
+                    }
+                )
+                skipped += 1
+                continue
+
+            pwd = r["password"]
+            try:
+                validate_password(pwd)
+            except DjangoValidationError as exc:
+                row_errors.append(
+                    {
+                        "row": r["row"],
+                        "email": r["email"],
+                        "message": "; ".join(exc.messages),
+                    }
+                )
+                skipped += 1
+                continue
 
             if CustomUser.objects.filter(email__iexact=r["email"]).exists():
                 row_errors.append(
@@ -395,6 +411,7 @@ class ForgotPasswordRequestView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = [EmailSendRateThrottle]
 
     def post(self, request):
         serializer = ForgotPasswordRequestSerializer(data=request.data)
@@ -455,6 +472,7 @@ class PasswordResetConfirmView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = [AuthPublicRateThrottle]
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
@@ -492,7 +510,7 @@ class RequestEmailVerificationView(APIView):
     """Send a verification code to the authenticated user's current email."""
 
     permission_classes = [IsAuthenticated]
-    throttle_classes = [AuthPublicRateThrottle]
+    throttle_classes = [EmailSendUserRateThrottle]
 
     def post(self, request):
         user = request.user
@@ -547,7 +565,7 @@ class RequestEmailChangeView(APIView):
     """Send a verification code to a new email address (applied after verification)."""
 
     permission_classes = [IsAuthenticated]
-    throttle_classes = [AuthPublicRateThrottle]
+    throttle_classes = [EmailSendUserRateThrottle]
 
     def post(self, request):
         serializer = RequestEmailChangeSerializer(data=request.data, context={"request": request})
@@ -588,7 +606,7 @@ class VerifyEmailView(APIView):
     """Verify a 6-digit code for the current email or a pending email change."""
 
     permission_classes = [IsAuthenticated]
-    throttle_classes = [AuthPublicRateThrottle]
+    throttle_classes = [EmailVerifyRateThrottle]
 
     def post(self, request):
         serializer = VerifyEmailCodeSerializer(data=request.data)

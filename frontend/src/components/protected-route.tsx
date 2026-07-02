@@ -1,8 +1,10 @@
+import { useEffect } from "react"
 import { Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 import type { UserRole } from "@/types/auth"
 import { getDashboardRouteForRole } from "@/types/auth"
 import { getEmailSetupRoute, requiresEmailSetup } from "@/lib/email-setup"
+import { logout as logoutApi } from "@/api/auth"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -22,15 +24,25 @@ export function ProtectedRoute({
   const location = useLocation()
   const hasAccessToken = !!localStorage.getItem("access_token")
 
+  useEffect(() => {
+    if (user && !user.is_active) {
+      void logoutApi()
+    }
+  }, [user])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border b-2 border-primary border-t-transparent mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary border-t-transparent mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
+  }
+
+  if (user && !user.is_active) {
+    return <Navigate to={loginPath} replace />
   }
 
   if (!hasAccessToken || !isAuthenticated) {

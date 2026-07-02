@@ -27,6 +27,11 @@ export function semesterDisplayLabel(semester: number): string {
   return `Semester ${semester}`
 }
 
+/** Short label for chart axes (e.g. "1" instead of "Semester 1"). */
+export function semesterChartLabel(semester: number): string {
+  return String(semester)
+}
+
 export function sortSemesters(values: Iterable<number>): number[] {
   return Array.from(new Set(values)).sort((a, b) => a - b)
 }

@@ -83,11 +83,37 @@ class CertificateSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "program",
+            "title",
+            "description",
+            "recipient_name",
+            "recipient_id_display",
+            "image_url",
             "issued_by",
+            "issued_date",
+            "valid_until",
             "pdf_file",
+            "status",
+            "status_display",
             "is_suspended",
             "created_at",
             "updated_at",
+        ]
+
+
+class CertificateUpdateSerializer(serializers.ModelSerializer):
+    """Staff certificate edits (requires CanIssueCertificates)."""
+
+    class Meta:
+        model = Certificate
+        fields = [
+            "title",
+            "description",
+            "recipient_name",
+            "recipient_id_display",
+            "image_url",
+            "issued_date",
+            "valid_until",
+            "status",
         ]
 
 

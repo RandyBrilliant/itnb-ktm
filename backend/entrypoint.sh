@@ -31,8 +31,10 @@ if [ "${DEBUG:-0}" = "0" ]; then
 fi
 
 # Run Django commands as appuser (so DB/files are owned correctly)
-# Create migrations if missing (e.g. first run with no migration files)
-gosu ${APP_UID}:${APP_GID} python manage.py makemigrations --noinput
+if [ "${DEBUG:-0}" != "0" ]; then
+    # Dev only: create migrations when models change locally
+    gosu ${APP_UID}:${APP_GID} python manage.py makemigrations --noinput
+fi
 
 # Run migrations
 gosu ${APP_UID}:${APP_GID} python manage.py migrate --noinput

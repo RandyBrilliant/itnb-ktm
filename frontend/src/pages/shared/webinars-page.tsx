@@ -12,7 +12,7 @@ import {
 } from "@/api/webinars"
 import type { UserRole } from "@/types/auth"
 import { getRoleBasePath } from "@/lib/role-path"
-import { resolveMediaUrl } from "@/lib/media-url"
+import { resolveMediaUrl, sanitizeExternalUrl } from "@/lib/media-url"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { PaginationControls } from "@/components/content/pagination-controls"
 import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
@@ -25,9 +25,11 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
   const queryClient = useQueryClient()
   const [code, setCode] = useState("")
   const [showCheckIn, setShowCheckIn] = useState(false)
+  const [attendancePhase, setAttendancePhase] = useState<"in" | "out">("in")
   const [showCancelModal, setShowCancelModal] = useState(false)
   const basePath = getRoleBasePath(role)
-  const image = resolveMediaUrl(webinar.post.image) || webinar.post.image_url || ""
+  const image = resolveMediaUrl(webinar.post.image) || resolveMediaUrl(webinar.post.image_url) || ""
+  const joinUrl = sanitizeExternalUrl(webinar.online_url)
 
   const reg = webinar.my_registration
   const isRegistered = reg != null && reg.status !== "CANCELLED"
@@ -112,10 +114,10 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
               {webinar.location}
             </p>
           ) : null}
-          {isOnline && webinar.online_url ? (
+          {isOnline && joinUrl ? (
             <p className="flex items-center gap-2">
               <Video size={16} className="text-[#af0f24]" />
-              <a href={webinar.online_url} target="_blank" rel="noopener noreferrer" className="text-[#af0f24] underline">
+              <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="text-[#af0f24] underline">
                 Join link
               </a>
             </p>
@@ -154,7 +156,11 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
               {!reg?.attended ? (
                 <button
                   type="button"
-                  onClick={() => (checkInOpen ? setShowCheckIn((prev) => !prev) : undefined)}
+                  onClick={() => {
+                    if (!checkInOpen) return
+                    setAttendancePhase("in")
+                    setShowCheckIn((prev) => !prev)
+                  }}
                   disabled={!checkInOpen}
                   title={
                     checkInOpen
@@ -170,7 +176,10 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
               ) : (
                 <button
                   type="button"
-                  onClick={() => checkOutMutation.mutate(undefined)}
+                  onClick={() => {
+                    setAttendancePhase("out")
+                    setShowCheckIn(true)
+                  }}
                   disabled={checkOutMutation.isPending || !!reg?.checked_out_at}
                   className="rounded-lg border border-[#d5d5d5] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-[#1a1c1c] transition hover:bg-[#f3f3f3] disabled:opacity-50"
                 >
@@ -191,10 +200,12 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
           )}
         </div>
 
-        {showCheckIn && checkInOpen ? (
+        {showCheckIn && (attendancePhase === "out" || checkInOpen) ? (
           <div className="space-y-3 rounded-lg border border-[#ececec] bg-[#fafafa] p-4">
             <p className="text-xs font-semibold text-[#1a1c1c]">
-              Enter the code shown on the attendance screen (or scan the QR).
+              {attendancePhase === "in"
+                ? "Enter the code shown on the attendance screen (or scan the QR)."
+                : "Enter the check-out code shown on the attendance screen."}
             </p>
             <div className="flex flex-wrap gap-2">
               <input
@@ -206,23 +217,21 @@ function WebinarCard({ webinar, role }: { webinar: WebinarItem; role: UserRole }
               />
               <button
                 type="button"
-                onClick={() => checkInMutation.mutate(code.trim())}
-                disabled={!code.trim() || checkInMutation.isPending}
+                onClick={() => {
+                  const token = code.trim()
+                  if (!token) return
+                  if (attendancePhase === "in") {
+                    checkInMutation.mutate(token)
+                  } else {
+                    checkOutMutation.mutate(token)
+                  }
+                }}
+                disabled={!code.trim() || checkInMutation.isPending || checkOutMutation.isPending}
                 className="rounded-lg bg-[#af0f24] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white transition hover:bg-[#930019] disabled:opacity-50"
               >
                 Submit
               </button>
             </div>
-            {isOnline ? (
-              <button
-                type="button"
-                onClick={() => checkInMutation.mutate(undefined)}
-                disabled={checkInMutation.isPending}
-                className="text-xs font-bold uppercase tracking-[0.12em] text-[#af0f24] underline"
-              >
-                Check in online (no code)
-              </button>
-            ) : null}
           </div>
         ) : null}
 

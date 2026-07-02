@@ -1,29 +1,14 @@
 import { useMemo, useState } from "react"
-import { isAxiosError } from "axios"
 import type { ScoreRow } from "@/api/academic"
+import { GpaTrendChart } from "@/components/academic/gpa-trend-chart"
 import { formatGpa, useMyAcademicQuery } from "@/hooks/use-academic-query"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { normalizeSemester, semesterDisplayLabel, sortSemesters } from "@/lib/semester"
 import { formatAppDateTime } from "@/lib/datetime"
+import { getUserFriendlyError } from "@/lib/error-message"
 import type { UserRole } from "@/types/auth"
 
 type SemesterFilter = "all" | number
-
-function getErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    const detail = error.response?.data?.detail
-    if (typeof detail === "string" && detail.trim()) {
-      return detail
-    }
-    if (error.response?.status === 503) {
-      return "Scores are temporarily unavailable. Please try again later."
-    }
-  }
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  return "Unable to load scores right now."
-}
 
 function gradeTone(grade: string): string {
   const g = grade.trim().toUpperCase()
@@ -53,11 +38,21 @@ export function ScoresPage({ role }: { role: UserRole }) {
 
   const summary = data?.summary
   const scores = data?.scores ?? []
+  const semesterGpa = data?.semester_gpa ?? []
   const isStale = data?.stale === true
   const syncedAtLabel = data?.synced_at ? formatAppDateTime(data.synced_at) : null
 
   const groupedScores = useMemo(() => groupBySemester(scores), [scores])
   const semesterOptions = useMemo(() => sortSemesters(groupedScores.keys()), [groupedScores])
+  const semesterGpaByNumber = useMemo(() => {
+    const map = new Map<number, number>()
+    for (const row of semesterGpa) {
+      if (row.gpa != null && !Number.isNaN(row.gpa)) {
+        map.set(row.semester, row.gpa)
+      }
+    }
+    return map
+  }, [semesterGpa])
 
   const visibleSemesters = useMemo(() => {
     if (semesterFilter === "all") return semesterOptions
@@ -84,7 +79,7 @@ export function ScoresPage({ role }: { role: UserRole }) {
               <span className="material-symbols-outlined text-3xl text-[#af0f24]/60">school</span>
             </div>
             <p className="text-lg font-bold text-[#1a1c1c]">Scores unavailable</p>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-[#5f5e5e]">{getErrorMessage(error)}</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-[#5f5e5e]">{getUserFriendlyError(error, "scores")}</p>
           </div>
         ) : (
           <>
@@ -145,6 +140,20 @@ export function ScoresPage({ role }: { role: UserRole }) {
               </div>
             ) : (
               <>
+                {semesterGpa.length > 0 ? (
+                  <article className="overflow-hidden rounded-3xl border border-[#ececec]/80 bg-white p-5 shadow-sm sm:p-6">
+                    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-[#1a1c1c]">GPA by semester</h3>
+                        <p className="mt-0.5 text-xs text-[#9a9a9a]">
+                          Weighted average from published grades
+                        </p>
+                      </div>
+                    </div>
+                    <GpaTrendChart data={semesterGpa} />
+                  </article>
+                ) : null}
+
                 {/* Semester filter */}
                 <div className="flex flex-col gap-3 rounded-2xl border border-[#ececec] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -180,6 +189,7 @@ export function ScoresPage({ role }: { role: UserRole }) {
                   ) : (
                     visibleSemesters.map((sem) => {
                       const rows = groupedScores.get(sem) ?? []
+                      const semGpa = semesterGpaByNumber.get(sem)
                       return (
                         <article
                           key={sem}
@@ -197,6 +207,16 @@ export function ScoresPage({ role }: { role: UserRole }) {
                                 </p>
                               </div>
                             </div>
+                            {semGpa != null ? (
+                              <div className="rounded-xl bg-[#af0f24]/8 px-3 py-2 text-right ring-1 ring-[#af0f24]/15">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#af0f24]/80">
+                                  Semester GPA
+                                </p>
+                                <p className="text-lg font-bold tabular-nums text-[#af0f24]">
+                                  {formatGpa(semGpa)}
+                                </p>
+                              </div>
+                            ) : null}
                           </div>
 
                           <div className="divide-y divide-[#f5f5f5]">

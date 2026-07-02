@@ -17,9 +17,16 @@ export interface ScoreRow {
   score: number | null
 }
 
+export interface SemesterGpa {
+  semester: number
+  gpa: number | null
+  credits: number | null
+}
+
 export interface AcademicProfile {
   summary: GpaSummary | null
   scores: ScoreRow[]
+  semester_gpa?: SemesterGpa[]
   /** True when served from a cached snapshot because the live SIS was unreachable. */
   stale?: boolean
   /** ISO timestamp of the cached snapshot (only set when stale). */

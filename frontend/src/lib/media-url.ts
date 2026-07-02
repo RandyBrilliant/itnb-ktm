@@ -36,3 +36,19 @@ export function resolveMediaUrl(url: string | undefined | null): string {
   if (!trimmed.includes("/")) return ""
   return `${base}/${trimmed}`
 }
+
+/** Allow only http(s) links for user-facing href attributes. */
+export function sanitizeExternalUrl(url: string | undefined | null): string {
+  if (url == null) return ""
+  const trimmed = String(url).trim()
+  if (!trimmed) return ""
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.href
+    }
+  } catch {
+    return ""
+  }
+  return ""
+}

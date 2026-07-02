@@ -17,6 +17,10 @@ export function ChangePasswordPage({ role }: { role: UserRole }) {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
+    if (newPassword !== confirmPassword) {
+      toast.error("Change password failed", "New password and confirmation do not match.")
+      return
+    }
     try {
       setSubmitting(true)
       await changePassword({

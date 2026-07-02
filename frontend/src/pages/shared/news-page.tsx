@@ -16,9 +16,14 @@ function formatDate(value?: string) {
 
 export function NewsPage({ role }: { role: UserRole }) {
   const [page, setPage] = useState(1)
+  const canSeeUnpublished = role === "ADMIN" || role === "STAFF"
   const { data, isLoading } = useQuery({
     queryKey: [role, "news-posts", page],
-    queryFn: () => listPosts({ page }),
+    queryFn: () =>
+      listPosts({
+        page,
+        ...(canSeeUnpublished ? {} : { is_published: true }),
+      }),
   })
 
   const posts = data?.results ?? []

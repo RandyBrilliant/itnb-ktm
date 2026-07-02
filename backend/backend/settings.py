@@ -15,6 +15,8 @@ from datetime import timedelta
 from pathlib import Path
 import sys
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -35,25 +37,51 @@ def get_env(key, default=None):
     return os.environ.get(key, default)
 
 
+def _csv_env(key, default=""):
+    """Parse a comma-separated environment variable into a trimmed list."""
+    raw = get_env(key, default) or default
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = get_env(
-    "SECRET_KEY",
+_INSECURE_DEV_SECRET_KEY = (
     "django-insecure-2!d-3$fwjq)l_!adh8_$ow8&boe*mfw7#e(pmy(l27=%=qha!u"
 )
+_INSECURE_SECRET_KEY_PLACEHOLDERS = {
+    _INSECURE_DEV_SECRET_KEY,
+    "change-me",
+    "change-me-to-secure-random-key",
+    "change-me-to-secure-random-key-min-50-chars-gunakan-ini-di-production",
+}
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = get_env("DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = get_env("DEBUG", "False").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = get_env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+_secret_from_env = get_env("SECRET_KEY")
+if _secret_from_env:
+    SECRET_KEY = _secret_from_env
+elif DEBUG:
+    SECRET_KEY = _INSECURE_DEV_SECRET_KEY
+else:
+    raise ImproperlyConfigured(
+        "SECRET_KEY environment variable is required when DEBUG is False."
+    )
+
+if not DEBUG and SECRET_KEY in _INSECURE_SECRET_KEY_PLACEHOLDERS:
+    raise ImproperlyConfigured(
+        "SECRET_KEY must be set to a secure value in production."
+    )
+
+ALLOWED_HOSTS = _csv_env("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = get_env(
+CORS_ALLOWED_ORIGINS = _csv_env(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
-).split(",")
+    "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173",
+)
 
 # Production security settings
 SECURE_SSL_REDIRECT = get_env("SECURE_SSL_REDIRECT", "False").lower() in ("true", "1", "yes")
@@ -61,11 +89,23 @@ SECURE_SSL_REDIRECT = get_env("SECURE_SSL_REDIRECT", "False").lower() in ("true"
 SECURE_REDIRECT_EXEMPT = [r"^health/$"]
 SESSION_COOKIE_SECURE = get_env("SESSION_COOKIE_SECURE", "False").lower() in ("true", "1", "yes")
 CSRF_COOKIE_SECURE = get_env("CSRF_COOKIE_SECURE", "False").lower() in ("true", "1", "yes")
-CSRF_TRUSTED_ORIGINS = get_env(
-    "CSRF_TRUSTED_ORIGINS",
-    "http://localhost:3000,http://localhost:5173"
-).split(",") if get_env("CSRF_TRUSTED_ORIGINS") else []
+CSRF_TRUSTED_ORIGINS = _csv_env("CSRF_TRUSTED_ORIGINS") if get_env("CSRF_TRUSTED_ORIGINS") else []
 FRONTEND_URL = get_env("FRONTEND_URL", "http://localhost:5173")
+
+if not DEBUG:
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = "DENY"
+    if SECURE_SSL_REDIRECT:
+        SECURE_HSTS_SECONDS = int(get_env("SECURE_HSTS_SECONDS", "31536000"))
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = get_env(
+            "SECURE_HSTS_INCLUDE_SUBDOMAINS", "True"
+        ).lower() in ("true", "1", "yes")
+        SECURE_HSTS_PRELOAD = get_env("SECURE_HSTS_PRELOAD", "False").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
 
 # Mailgun API (https://documentation.mailgun.com/docs/mailgun/api-reference/)
 MAILGUN_API_KEY = get_env("MAILGUN_API_KEY", "")
@@ -111,6 +151,7 @@ INSTALLED_APPS = [
     # Third-party
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'channels',
     
@@ -283,6 +324,9 @@ REST_FRAMEWORK = {
         'user': '1000/hour',
         'auth': '10/min',
         'auth_public': '5/min',
+        'email_send': '3/hour',
+        'email_send_user': '5/hour',
+        'email_verify': '10/min',
     },
     'EXCEPTION_HANDLER': 'account.exceptions.custom_exception_handler',
 }
@@ -324,6 +368,33 @@ def _default_redis_url() -> str:
 
 _DEFAULT_REDIS_URL = _default_redis_url()
 
+
+def _default_redis_cache_url() -> str:
+    """Use a separate Redis DB for Django cache (Celery uses /0)."""
+    explicit = get_env('REDIS_CACHE_URL', '')
+    if explicit:
+        return explicit
+    base = _DEFAULT_REDIS_URL.rstrip('/')
+    if base.endswith('/0'):
+        return f"{base[:-1]}1"
+    return f"{base}/1"
+
+
+# Throttle state must be shared across workers (use Redis in dev/prod).
+if 'test' in sys.argv:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        },
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': _default_redis_cache_url(),
+        },
+    }
+
 CELERY_BROKER_URL = get_env('CELERY_BROKER_URL', _DEFAULT_REDIS_URL)
 CELERY_RESULT_BACKEND = get_env('CELERY_RESULT_BACKEND', _DEFAULT_REDIS_URL)
 CELERY_ACCEPT_CONTENT = ['json']
@@ -347,7 +418,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('127.0.0.1', 6379)],
+            'hosts': [get_env('REDIS_CHANNEL_URL') or get_env('CELERY_BROKER_URL') or _DEFAULT_REDIS_URL],
         },
     },
 }
