@@ -79,6 +79,7 @@ from .services.card_generation import (
     save_card_image_to_bytes,
 )
 from .services.card_validity import effective_card_valid_until, student_card_valid_until
+from .intake_year import institutional_id_prefix_for_intake_year, parse_intake_year
 
 logger = logging.getLogger(__name__)
 
@@ -606,7 +607,7 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdmin]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["role", "is_active"]
+    filterset_fields = ["role", "is_active", "department"]
     search_fields = ["email", "full_name"]
     ordering_fields = ["date_joined", "updated_at", "email"]
     ordering = ["-date_joined"]
@@ -623,6 +624,12 @@ class UserViewSet(viewsets.ModelViewSet):
             parts = [r for r in raw if r in allowed]
             if parts:
                 queryset = queryset.filter(role__in=parts)
+
+        intake_year = parse_intake_year(self.request.query_params.get("intake_year"))
+        if intake_year is not None:
+            prefix = institutional_id_prefix_for_intake_year(intake_year)
+            queryset = queryset.filter(institutional_id__startswith=prefix)
+
         return queryset
 
     def get_serializer_class(self):

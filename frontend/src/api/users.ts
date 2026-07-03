@@ -66,6 +66,9 @@ export interface UserFilters {
   /** Comma-separated roles (e.g. STUDENT,ALUMNI). Backend filters with role__in. */
   roles?: string
   is_active?: boolean
+  department?: string
+  /** Cohort year derived from the first two digits of institutional ID (NIM). */
+  intake_year?: number
   search?: string
   page?: number
   page_size?: number

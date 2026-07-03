@@ -10,6 +10,8 @@ import { ActiveStatusBadge } from "@/components/admin/active-status-badge"
 import { PersonNameBlock } from "@/components/profile/person-name-block"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
+import { getIntakeYearFilterOptions } from "@/lib/academic-year"
+import { STUDENT_DEPARTMENTS } from "@/lib/student-departments"
 import { Search, Check, X, Download, Upload, Pencil, Image as ImageIcon } from "lucide-react"
 
 /**
@@ -17,10 +19,16 @@ import { Search, Check, X, Download, Upload, Pencil, Image as ImageIcon } from "
  */
 /** Student Records lists students and alumni only (not admin/staff/lecturer). */
 type RecordRoleScope = "both" | "STUDENT" | "ALUMNI"
+type StatusFilter = "" | "active" | "inactive"
+
+const INTAKE_YEAR_OPTIONS = getIntakeYearFilterOptions()
 
 export function AdminUsersPage() {
   const [search, setSearch] = useState("")
   const [recordRoleScope, setRecordRoleScope] = useState<RecordRoleScope>("both")
+  const [departmentFilter, setDepartmentFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("")
+  const [intakeYearFilter, setIntakeYearFilter] = useState("")
   const [page, setPage] = useState(1)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
@@ -34,6 +42,13 @@ export function AdminUsersPage() {
     ...(recordRoleScope === "both"
       ? { roles: "STUDENT,ALUMNI" }
       : { role: recordRoleScope }),
+    department: departmentFilter || undefined,
+    ...(statusFilter === "active"
+      ? { is_active: true }
+      : statusFilter === "inactive"
+        ? { is_active: false }
+        : {}),
+    intake_year: intakeYearFilter ? Number(intakeYearFilter) : undefined,
     page,
     page_size: 20,
   })
@@ -132,8 +147,8 @@ export function AdminUsersPage() {
       </div>
 
       <div className="space-y-4 rounded-sm border border-[#e2e2e2] bg-white p-4 shadow-[32px_0_32px_rgba(175,15,36,0.04)]">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="relative lg:col-span-2">
             <Search
               size={18}
               className="absolute left-3 top-3 text-[#5f5e5e]"
@@ -162,7 +177,51 @@ export function AdminUsersPage() {
             <option value="STUDENT">Students only</option>
             <option value="ALUMNI">Alumni only</option>
           </select>
-          <div></div>
+
+          <select
+            value={departmentFilter}
+            onChange={(e) => {
+              setDepartmentFilter(e.target.value)
+              setPage(1)
+            }}
+            className="border border-[#d5d5d5] bg-white px-4 py-2 text-[#1a1c1c] outline-none transition focus:border-[#af0f24]"
+          >
+            <option value="">All study programs</option>
+            {STUDENT_DEPARTMENTS.map((department) => (
+              <option key={department} value={department}>
+                {department}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as StatusFilter)
+              setPage(1)
+            }}
+            className="border border-[#d5d5d5] bg-white px-4 py-2 text-[#1a1c1c] outline-none transition focus:border-[#af0f24]"
+          >
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          <select
+            value={intakeYearFilter}
+            onChange={(e) => {
+              setIntakeYearFilter(e.target.value)
+              setPage(1)
+            }}
+            className="border border-[#d5d5d5] bg-white px-4 py-2 text-[#1a1c1c] outline-none transition focus:border-[#af0f24]"
+          >
+            <option value="">All intake years</option>
+            {INTAKE_YEAR_OPTIONS.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="border-t border-[#ececec] pt-4 md:col-span-3">

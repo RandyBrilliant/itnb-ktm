@@ -20,6 +20,12 @@ export function formatAcademicYearRange(institutionalId?: string | null): string
   return `${year}/${nextShort}`
 }
 
+/** Dropdown options for admin student-record intake year filter. */
+export function getIntakeYearFilterOptions(backYears = 25): number[] {
+  const current = new Date().getFullYear()
+  return Array.from({ length: backYears }, (_, index) => current - index)
+}
+
 /** Shell subtitle, e.g. "Academic Year 2018/19" */
 export function formatAcademicYearSubtitle(institutionalId?: string | null): string | null {
   const range = formatAcademicYearRange(institutionalId)
