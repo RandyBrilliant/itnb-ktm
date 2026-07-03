@@ -215,15 +215,15 @@ class StudentImportView(APIView):
                 try:
                     validate_password(pwd)
                 except DjangoValidationError as exc:
-                row_errors.append(
-                    {
-                        "row": r["row"],
-                        "email": r["email"],
-                        "message": "; ".join(exc.messages),
-                    }
-                )
-                skipped += 1
-                continue
+                    row_errors.append(
+                        {
+                            "row": r["row"],
+                            "email": r["email"],
+                            "message": "; ".join(exc.messages),
+                        }
+                    )
+                    skipped += 1
+                    continue
 
             if CustomUser.objects.filter(email__iexact=r["email"]).exists():
                 row_errors.append(
