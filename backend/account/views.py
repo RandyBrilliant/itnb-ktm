@@ -209,21 +209,12 @@ class StudentImportView(APIView):
 
         for r in rows:
             inst = r["institutional_id"]
-            if not r["password"]:
-                row_errors.append(
-                    {
-                        "row": r["row"],
-                        "email": r["email"],
-                        "message": "Password is required for each imported row.",
-                    }
-                )
-                skipped += 1
-                continue
-
-            pwd = r["password"]
-            try:
-                validate_password(pwd)
-            except DjangoValidationError as exc:
+            explicit_password = (r["password"] or "").strip()
+            pwd = explicit_password or inst
+            if explicit_password:
+                try:
+                    validate_password(pwd)
+                except DjangoValidationError as exc:
                 row_errors.append(
                     {
                         "row": r["row"],
