@@ -23,8 +23,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
 from django.http import HttpResponse
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.contrib.auth.password_validation import validate_password
 from rest_framework.parsers import FormParser, MultiPartParser
 
 from .models import (
@@ -211,19 +209,6 @@ class StudentImportView(APIView):
             inst = r["institutional_id"]
             explicit_password = (r["password"] or "").strip()
             pwd = explicit_password or inst
-            if explicit_password:
-                try:
-                    validate_password(pwd)
-                except DjangoValidationError as exc:
-                    row_errors.append(
-                        {
-                            "row": r["row"],
-                            "email": r["email"],
-                            "message": "; ".join(exc.messages),
-                        }
-                    )
-                    skipped += 1
-                    continue
 
             if CustomUser.objects.filter(email__iexact=r["email"]).exists():
                 row_errors.append(
