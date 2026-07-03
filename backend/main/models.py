@@ -148,6 +148,21 @@ class Certificate(models.Model):
     issued_date = models.DateField(_("issued date"))
     valid_until = models.DateField(_("valid until"), null=True, blank=True)
     pdf_file = models.FileField(_("PDF file"), upload_to="certificates/%Y/%m/", null=True, blank=True)
+    legacy_code = models.CharField(
+        _("legacy verification code"),
+        max_length=64,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text=_("SHA-256 code from the previous certificate system."),
+    )
+    legacy_pdf_url = models.URLField(
+        _("legacy PDF URL"),
+        max_length=500,
+        blank=True,
+        help_text=_("Original itnb.ac.id certificate download URL when PDFs were pre-generated."),
+    )
     status = models.CharField(_("status"), max_length=20, choices=CertificateStatus.choices, default=CertificateStatus.DRAFT)
     is_suspended = models.BooleanField(
         _("hidden from recipient portal"),

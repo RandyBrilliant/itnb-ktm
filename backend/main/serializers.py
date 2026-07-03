@@ -57,6 +57,7 @@ class CertificateSerializer(serializers.ModelSerializer):
     issued_by = UserSummarySerializer(read_only=True)
     program = CertificateProgramStubSerializer(read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    pdf_available = serializers.SerializerMethodField()
 
     class Meta:
         model = Certificate
@@ -73,6 +74,7 @@ class CertificateSerializer(serializers.ModelSerializer):
             "issued_date",
             "valid_until",
             "pdf_file",
+            "pdf_available",
             "status",
             "status_display",
             "is_suspended",
@@ -92,12 +94,21 @@ class CertificateSerializer(serializers.ModelSerializer):
             "issued_date",
             "valid_until",
             "pdf_file",
+            "pdf_available",
             "status",
             "status_display",
             "is_suspended",
             "created_at",
             "updated_at",
         ]
+
+    def get_pdf_available(self, obj: Certificate) -> bool:
+        if obj.pdf_file:
+            return True
+        if (obj.legacy_pdf_url or "").strip():
+            return True
+        program = obj.program
+        return bool(program and program.template_image)
 
 
 class CertificateUpdateSerializer(serializers.ModelSerializer):

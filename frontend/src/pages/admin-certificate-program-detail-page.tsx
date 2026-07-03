@@ -14,6 +14,7 @@ import { toast } from "@/lib/toast"
 import { ConfirmActionModal } from "@/components/ui/confirm-action-modal"
 import { PaginationControls } from "@/components/content/pagination-controls"
 import { PersonNameBlock } from "@/components/profile/person-name-block"
+import { certificatePdfAvailable } from "@/lib/certificate-pdf"
 
 export function AdminCertificateProgramDetailPage() {
   const { programId } = useParams<{ programId: string }>()
@@ -212,15 +213,21 @@ export function AdminCertificateProgramDetailPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            disabled={viewingId === c.id}
-                            onClick={() => handleViewCertificate(c)}
-                            className="rounded-lg bg-[#af0f24] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-white hover:bg-[#930019] disabled:opacity-60"
-                            title={`Open PDF — ${c.recipient_name || c.user?.full_name || ""}`}
-                          >
-                            {viewingId === c.id ? "Opening…" : "View certificate"}
-                          </button>
+                          {certificatePdfAvailable(c) ? (
+                            <button
+                              type="button"
+                              disabled={viewingId === c.id}
+                              onClick={() => handleViewCertificate(c)}
+                              className="rounded-lg bg-[#af0f24] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-white hover:bg-[#930019] disabled:opacity-60"
+                              title={`Open PDF — ${c.recipient_name || c.user?.full_name || ""}`}
+                            >
+                              {viewingId === c.id ? "Opening…" : "View certificate"}
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#9a9a9a]">
+                              PDF unavailable
+                            </span>
+                          )}
                           {c.is_suspended ? (
                             <button
                               type="button"

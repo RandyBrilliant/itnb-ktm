@@ -22,6 +22,7 @@ export interface CertificateItem {
   issued_date: string
   valid_until?: string | null
   pdf_file?: string | null
+  pdf_available?: boolean
   recipient_name?: string
   recipient_id_display?: string
   program?: {
@@ -43,12 +44,18 @@ export interface PaginatedResponse<T> {
 
 export async function listCertificates(
   page = 1,
-  options?: { programId?: number }
+  options?: { programId?: number; userId?: number; pageSize?: number }
 ): Promise<PaginatedResponse<CertificateItem>> {
   const params = new URLSearchParams()
   params.set("page", String(page))
   if (options?.programId != null) {
     params.set("program", String(options.programId))
+  }
+  if (options?.userId != null) {
+    params.set("user", String(options.userId))
+  }
+  if (options?.pageSize != null) {
+    params.set("page_size", String(options.pageSize))
   }
   const { data } = await api.get<
     ApiSuccessResponse<PaginatedResponse<CertificateItem>> | PaginatedResponse<CertificateItem>

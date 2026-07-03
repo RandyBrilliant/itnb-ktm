@@ -8,6 +8,7 @@ import { toast } from "@/lib/toast"
 import { getRoleBasePath } from "@/lib/role-path"
 import { formatAppDate } from "@/lib/datetime"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { certificatePdfAvailable } from "@/lib/certificate-pdf"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { PaginationControls } from "@/components/content/pagination-controls"
 import { PersonNameBlock } from "@/components/profile/person-name-block"
@@ -60,6 +61,7 @@ export function CertificatesListSection({ role }: { role: UserRole }) {
             {certificates.map((cert) => {
               const templateUrl = resolveMediaUrl(cert.program?.template_image ?? null)
               const hasCard = Boolean(templateUrl)
+              const canDownloadPdf = certificatePdfAvailable(cert)
 
               return (
                 <article key={cert.id} className="overflow-hidden rounded-2xl border border-[#ececec] bg-white">
@@ -106,14 +108,16 @@ export function CertificatesListSection({ role }: { role: UserRole }) {
                         >
                           View
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleDownload(cert)}
-                          disabled={downloadingId === cert.id}
-                          className="inline-flex items-center gap-2 rounded-lg border border-[#ddd] px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#1a1c1c] disabled:opacity-60"
-                        >
-                          {downloadingId === cert.id ? "Preparing..." : "PDF"}
-                        </button>
+                        {canDownloadPdf ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(cert)}
+                            disabled={downloadingId === cert.id}
+                            className="inline-flex items-center gap-2 rounded-lg border border-[#ddd] px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#1a1c1c] disabled:opacity-60"
+                          >
+                            {downloadingId === cert.id ? "Preparing..." : "PDF"}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>

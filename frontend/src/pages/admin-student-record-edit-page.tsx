@@ -5,6 +5,7 @@ import { getUser, updateUser } from "@/api/users"
 import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
 import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
 import { AdminUserEmailActionsCard } from "@/components/admin/admin-user-email-actions-card"
+import { AdminStudentCertificatesSection } from "@/components/admin/admin-student-certificates-section"
 import { StudentDepartmentSelect } from "@/components/form/student-department-select"
 import { DatePickerField } from "@/components/ui/date-picker-field"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
@@ -281,6 +282,8 @@ export function AdminStudentRecordEditPage() {
           <UserAccountMetadata user={user} title="Record Details" />
         </div>
       </div>
+
+      <AdminStudentCertificatesSection userId={userId} />
     </div>
   )
 }

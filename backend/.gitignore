@@ -63,5 +63,8 @@ celerybeat-schedule
 postgres_data/
 redis_data/
 
+# Local import dumps (not committed)
+data/*.sql
+
 # Virtualenv lib dirs are covered by env/, .venv/, venv/ above.
 # Do not add a bare lib/ rule — it ignores deploy/lib/ (deploy scripts).

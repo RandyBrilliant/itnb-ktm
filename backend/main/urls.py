@@ -17,5 +17,10 @@ router.register(r"events", views.EventViewSet, basename="event")
 router.register(r"webinars", views.WebinarViewSet, basename="webinar")
 
 urlpatterns = [
+    path(
+        "certificates/verify/<str:institutional_id>/",
+        views.CertificateVerifyView.as_view(),
+        name="certificate-verify",
+    ),
     path("", include(router.urls)),
 ]

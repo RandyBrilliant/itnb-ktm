@@ -14,9 +14,9 @@ from .models import (
 
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ("title", "user", "program", "status", "is_suspended", "issued_date", "valid_until")
+    list_display = ("title", "user", "program", "status", "is_suspended", "issued_date", "legacy_code")
     list_filter = ("status", "is_suspended", "issued_date", "valid_until")
-    search_fields = ("title", "user__email", "recipient_name", "recipient_id_display")
+    search_fields = ("title", "user__email", "recipient_name", "recipient_id_display", "legacy_code")
     readonly_fields = ("created_at", "updated_at")
 
 

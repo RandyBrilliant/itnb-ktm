@@ -7,6 +7,7 @@ import type { UserRole } from "@/types/auth"
 import { getRoleBasePath } from "@/lib/role-path"
 import { formatAppDate } from "@/lib/datetime"
 import { resolveMediaUrl } from "@/lib/media-url"
+import { certificatePdfAvailable } from "@/lib/certificate-pdf"
 import { RoleContentLayout } from "@/components/layout/role-content-layout"
 import { PersonNameBlock } from "@/components/profile/person-name-block"
 import { toast } from "@/lib/toast"
@@ -29,6 +30,7 @@ export function CertificateDetailPage({ role }: { role: UserRole }) {
 
   const templateUrl = resolveMediaUrl(data?.program?.template_image ?? null)
   const canShowCard = Boolean(templateUrl && data)
+  const canDownloadPdf = data ? certificatePdfAvailable(data) : false
 
   const handleDownload = async () => {
     if (!data) return
@@ -89,14 +91,20 @@ export function CertificateDetailPage({ role }: { role: UserRole }) {
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2 border-t border-[#ececec] pt-4">
-                <button
-                  type="button"
-                  onClick={handleDownload}
-                  disabled={downloading}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#ddd] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#1a1c1c] disabled:opacity-60"
-                >
-                  {downloading ? "Preparing…" : "Download PDF"}
-                </button>
+                {canDownloadPdf ? (
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#ddd] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#1a1c1c] disabled:opacity-60"
+                  >
+                    {downloading ? "Preparing…" : "Download PDF"}
+                  </button>
+                ) : (
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#9a9a9a]">
+                    PDF not available for this certificate
+                  </p>
+                )}
               </div>
             </div>
           </>

@@ -234,7 +234,7 @@ class StudentImportView(APIView):
                 continue
 
             try:
-                CustomUser.objects.create_user(
+                user = CustomUser.objects.create_user(
                     email=r["email"],
                     password=pwd,
                     role=r["role"],

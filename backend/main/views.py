@@ -4,17 +4,19 @@ import base64
 import logging
 
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from account.api_responses import ApiCode, ApiMessage, error_response, success_response
+from account.throttles import AuthPublicRateThrottle
 from account.exceptions import RolePermissionDenied
 from account.permissions import (
     CanIssueCertificates,
@@ -43,6 +45,7 @@ from main.tasks import issue_webinar_certificate, process_certificate_program_ba
 from main.services.benefit_filtering import get_benefits_for_user
 from main.services.certificate_generation import generate_certificate_pdf_bytes
 from main.services.certificate_issuance import issue_program_certificate
+from main.services.certificate_verification import verify_certificates_by_institutional_id
 from main.services.webinar_attendance import (
     TOKEN_STEP_SECONDS,
     VALID_PHASES,
@@ -182,6 +185,10 @@ class CertificateViewSet(viewsets.ModelViewSet):
         if certificate.user == request.user and certificate.is_suspended:
             return Response(error_response(detail="Certificate unavailable."), status=status.HTTP_404_NOT_FOUND)
 
+        legacy_url = (certificate.legacy_pdf_url or "").strip()
+        if legacy_url:
+            return HttpResponseRedirect(legacy_url)
+
         try:
             bio = generate_certificate_pdf_bytes(certificate)
             bio.seek(0)
@@ -205,6 +212,10 @@ class CertificateViewSet(viewsets.ModelViewSet):
 
         if certificate.user == request.user and certificate.is_suspended:
             return Response(error_response(detail="Certificate unavailable."), status=status.HTTP_404_NOT_FOUND)
+
+        legacy_url = (certificate.legacy_pdf_url or "").strip()
+        if legacy_url:
+            return Response({"download_url": legacy_url})
 
         if certificate.pdf_file:
             return Response({"download_url": certificate.pdf_file.url})
@@ -242,6 +253,27 @@ class CertificateViewSet(viewsets.ModelViewSet):
                 detail="Certificate visible again in recipient portal.",
                 code=ApiCode.SUCCESS,
             ),
+            status=status.HTTP_200_OK,
+        )
+
+
+class CertificateVerifyView(APIView):
+    """Public certificate lookup by institutional ID (NIM/NIP)."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [AuthPublicRateThrottle]
+
+    def get(self, request, institutional_id: str):
+        result = verify_certificates_by_institutional_id(institutional_id)
+        if result is None:
+            return Response(
+                error_response(detail="No portal account found for this institutional ID.", code=ApiCode.NOT_FOUND),
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            success_response(data=result),
             status=status.HTTP_200_OK,
         )
 
