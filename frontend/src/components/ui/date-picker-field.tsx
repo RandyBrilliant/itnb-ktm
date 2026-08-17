@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 const API_DATE_FORMAT = "yyyy-MM-dd"
 const DISPLAY_DATE_FORMAT = "dd MMM yyyy"
+const DEFAULT_FROM_YEAR = 1920
 
 function parseApiDate(value: string): Date | undefined {
   if (!value.trim()) return undefined
@@ -20,6 +21,10 @@ function formatApiDate(date: Date | undefined): string {
   return format(date, API_DATE_FORMAT)
 }
 
+function isNativeSelectTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest("select"))
+}
+
 export type DatePickerFieldProps = {
   value: string
   onChange: (value: string) => void
@@ -29,6 +34,9 @@ export type DatePickerFieldProps = {
   required?: boolean
   className?: string
   id?: string
+  fromYear?: number
+  toYear?: number
+  disableFuture?: boolean
 }
 
 export function DatePickerField({
@@ -40,9 +48,15 @@ export function DatePickerField({
   required = false,
   className,
   id,
+  fromYear = DEFAULT_FROM_YEAR,
+  toYear,
+  disableFuture = false,
 }: DatePickerFieldProps) {
   const selectedDate = parseApiDate(value)
   const displayValue = selectedDate ? format(selectedDate, DISPLAY_DATE_FORMAT) : placeholder
+  const resolvedToYear = toYear ?? new Date().getFullYear() + (disableFuture ? 0 : 10)
+  const startMonth = new Date(fromYear, 0)
+  const endMonth = disableFuture ? new Date() : new Date(resolvedToYear, 11)
 
   return (
     <div className={cn("space-y-1", className)}>
@@ -69,13 +83,27 @@ export function DatePickerField({
             {displayValue}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent
+          className="w-auto overflow-visible p-0"
+          align="start"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => {
+            if (isNativeSelectTarget(event.target)) event.preventDefault()
+          }}
+          onFocusOutside={(event) => {
+            if (isNativeSelectTarget(event.target)) event.preventDefault()
+          }}
+        >
           <Calendar
             mode="single"
             selected={selectedDate}
             onSelect={(date) => onChange(formatApiDate(date))}
             defaultMonth={selectedDate}
-            initialFocus
+            captionLayout="dropdown"
+            startMonth={startMonth}
+            endMonth={endMonth}
+            disabled={disableFuture ? { after: new Date() } : undefined}
+            autoFocus
           />
         </PopoverContent>
       </Popover>

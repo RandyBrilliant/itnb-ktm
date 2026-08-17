@@ -1,40 +1,61 @@
 import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
-const defaultClassNames = getDefaultClassNames()
-
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  captionLayout = "label",
+  navLayout = "around",
+  components,
   ...props
 }: CalendarProps) {
+  const defaultClassNames = getDefaultClassNames()
+  const hasDropdowns = captionLayout !== "label"
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      captionLayout={captionLayout}
+      navLayout={navLayout}
       className={cn("p-3", className)}
       classNames={{
         ...defaultClassNames,
-        months: cn(defaultClassNames.months, "flex flex-col sm:flex-row gap-4"),
+        months: cn(defaultClassNames.months, "relative flex flex-col sm:flex-row gap-4"),
         month: cn(defaultClassNames.month, "space-y-4"),
         month_caption: cn(
           defaultClassNames.month_caption,
-          "relative flex items-center justify-center pt-1"
+          "relative flex items-center justify-center pt-1",
+          hasDropdowns && "px-8"
         ),
-        caption_label: cn(defaultClassNames.caption_label, "text-sm font-semibold text-[#1a1c1c]"),
-        nav: cn(defaultClassNames.nav, "flex items-center gap-1"),
+        caption_label: cn(
+          defaultClassNames.caption_label,
+          "text-sm font-semibold text-[#1a1c1c]",
+          hasDropdowns &&
+            "pointer-events-none flex h-8 items-center gap-1 px-1 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-[#5f5e5e]"
+        ),
+        dropdowns: cn(
+          defaultClassNames.dropdowns,
+          "flex items-center justify-center gap-1.5 text-sm font-semibold text-[#1a1c1c]"
+        ),
+        dropdown_root: cn(
+          defaultClassNames.dropdown_root,
+          "relative rounded-sm border border-[#d5d5d5] hover:bg-[#ececec]"
+        ),
+        dropdown: cn(defaultClassNames.dropdown, "absolute inset-0 z-[2] cursor-pointer opacity-0"),
+        nav: cn(defaultClassNames.nav, "pointer-events-none flex items-center gap-1"),
         button_previous: cn(
           defaultClassNames.button_previous,
-          "absolute left-1 inline-flex h-7 w-7 items-center justify-center p-0 opacity-80 transition hover:opacity-100"
+          "pointer-events-auto absolute left-1 z-[3] inline-flex h-7 w-7 items-center justify-center p-0 opacity-80 transition hover:opacity-100"
         ),
         button_next: cn(
           defaultClassNames.button_next,
-          "absolute right-1 inline-flex h-7 w-7 items-center justify-center p-0 opacity-80 transition hover:opacity-100"
+          "pointer-events-auto absolute right-1 z-[3] inline-flex h-7 w-7 items-center justify-center p-0 opacity-80 transition hover:opacity-100"
         ),
         month_grid: cn(defaultClassNames.month_grid, "w-full border-collapse"),
         weekdays: cn(defaultClassNames.weekdays, "flex"),
@@ -53,12 +74,17 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Chevron: ({ orientation }) =>
-          orientation === "left" ? (
-            <ChevronLeft className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          ),
+        Chevron: ({ className: chevronClassName, orientation }) => {
+          const iconClassName = cn("h-4 w-4", chevronClassName)
+          if (orientation === "left") {
+            return <ChevronLeft className={iconClassName} />
+          }
+          if (orientation === "right") {
+            return <ChevronRight className={iconClassName} />
+          }
+          return <ChevronDown className={iconClassName} />
+        },
+        ...components,
       }}
       {...props}
     />

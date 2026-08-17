@@ -226,6 +226,9 @@ export function AdminStudentRecordEditPage() {
                 value={dateOfBirth}
                 onChange={setDateOfBirth}
                 placeholder="Select date of birth"
+                fromYear={1920}
+                toYear={new Date().getFullYear()}
+                disableFuture
               />
             </>
           ) : null}

@@ -221,3 +221,18 @@
   background-color: #ececec;
   color: #1a1c1c;
 }
+
+/* Keep month/year dropdowns clickable under the absolutely positioned nav overlay. */
+.rdp-root .rdp-nav {
+  pointer-events: none;
+}
+
+.rdp-root .rdp-button_previous,
+.rdp-root .rdp-button_next {
+  pointer-events: auto;
+}
+
+.rdp-root .rdp-dropdown {
+  z-index: 2;
+  cursor: pointer;
+}
