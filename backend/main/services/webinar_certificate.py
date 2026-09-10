@@ -18,7 +18,8 @@ def ensure_webinar_certificate_program(
     title: str | None = None,
 ) -> CertificateProgram:
     """
-    Attach a template-only CertificateProgram to a webinar for auto-issue on check-in.
+    Attach a CertificateProgram to a webinar for auto-issue on check-in.
+    Template artwork is optional; without it, PDFs use the generic layout.
     Updates the existing linked program when one is already present.
     """
     program_title = (title or webinar.post.title).strip()

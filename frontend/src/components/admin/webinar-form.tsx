@@ -148,18 +148,6 @@ export function WebinarForm({
       return
     }
 
-    if (
-      values.auto_issue_certificate &&
-      !certificateTemplateFile &&
-      !existingCertificateTemplateUrl
-    ) {
-      toast.warning(
-        "Certificate template required",
-        "Upload an A4 certificate design, or disable auto-issue."
-      )
-      return
-    }
-
     const hasCertificateTemplate = !!(certificateTemplateFile || existingCertificateTemplateUrl)
 
     const payload: WebinarPayload = {
@@ -300,13 +288,14 @@ export function WebinarForm({
         <div className="rounded-sm border border-[#ececec] bg-[#fafafa] p-4">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#af0f24]">Certificate</p>
           <p className="mt-1 text-sm text-[#5f5e5e]">
-            Upload the A4 certificate artwork and place the student name and ID. Attendees who check in
-            can view their certificate in the portal — PDF download is optional.
+            Optionally upload A4 certificate artwork and place the student name and ID. Without a template,
+            attendees still receive a generic PDF. Those who check in can view their certificate in the
+            portal.
           </p>
 
           <div className="mt-4 space-y-4">
             <ImageUploadField
-              label="Certificate template (JPG/PNG, A4)"
+              label="Certificate template (optional, JPG/PNG, A4)"
               file={certificateTemplateFile}
               existingImageUrl={existingCertificateTemplateUrl}
               onFileChange={(file) => {

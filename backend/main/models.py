@@ -78,13 +78,20 @@ def default_certificate_layout():
 
 class CertificateProgram(models.Model):
     """
-    One certificate offering (e.g. seminar): admin uploads an A4 template and a recipient Excel file.
-    Celery generates one Certificate per matched portal user (by institutional_id).
+    One certificate offering (e.g. seminar): admin optionally uploads an A4 template
+    and a recipient Excel file. Celery generates one Certificate per matched portal
+    user (by institutional_id). Without a template, PDFs use a generic layout.
     """
 
     title = models.CharField(_("program title"), max_length=255)
     description = models.TextField(_("description"), blank=True)
-    template_image = models.ImageField(_("template image"), upload_to="certificate_templates/%Y/%m/")
+    template_image = models.ImageField(
+        _("template image"),
+        upload_to="certificate_templates/%Y/%m/",
+        null=True,
+        blank=True,
+        help_text=_("Optional A4 artwork. When omitted, a generic PDF is generated."),
+    )
     layout = models.JSONField(_("text layout"), default=default_certificate_layout)
     issued_date = models.DateField(_("issued date"))
     valid_until = models.DateField(_("valid until"), null=True, blank=True)

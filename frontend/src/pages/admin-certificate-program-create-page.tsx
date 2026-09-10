@@ -37,9 +37,9 @@ export function AdminCertificateProgramCreatePage() {
         description,
         issuedDate,
         validUntil: validUntil.trim() ? validUntil : null,
-        templateImage: templateImage!,
+        templateImage,
         recipientsFile: recipientsFile!,
-        layout,
+        layout: templateImage ? layout : undefined,
       }),
     onSuccess: () => {
       toast.success("Batch created", "Recipients are being processed in the background.")
@@ -53,8 +53,8 @@ export function AdminCertificateProgramCreatePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!templateImage || !recipientsFile) {
-      toast.error("Missing files", "Upload both the certificate template image and the Excel file.")
+    if (!recipientsFile) {
+      toast.error("Missing file", "Upload the Excel file of recipients.")
       return
     }
     mutation.mutate()
@@ -66,9 +66,10 @@ export function AdminCertificateProgramCreatePage() {
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#af0f24]">Administration</p>
         <h1 className="font-[var(--font-heading)] text-4xl font-extrabold text-[#1a1c1c]">New certificate batch</h1>
         <p className="mt-1 max-w-3xl text-sm text-[#5f5e5e]">
-          Upload an A4-sized JPG or PNG template and an Excel file with <strong>Name</strong> and <strong>ID</strong>{" "}
-          columns. Each row is matched to a portal user by official ID (or email / digital card number when applicable).
-          Students view their certificate in the portal; PDF download is generated only when requested.
+          Upload an Excel file with <strong>Name</strong> and <strong>ID</strong> columns. A template image is optional —
+          without one, students still receive a generic PDF. Each row is matched to a portal user by official ID (or
+          email / digital card number when applicable). Students view their certificate in the portal; PDF download is
+          generated only when requested.
         </p>
       </div>
 
@@ -115,9 +116,10 @@ export function AdminCertificateProgramCreatePage() {
 
         <div className="grid gap-6 md:grid-cols-2">
           <label className="block space-y-1">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Template image (JPG/PNG)</span>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">
+              Template image (optional, JPG/PNG)
+            </span>
             <input
-              required
               type="file"
               accept="image/jpeg,image/png"
               className="text-sm file:mr-3 file:rounded-sm file:border file:border-[#ddd] file:bg-white file:px-3 file:py-2"

@@ -58,7 +58,7 @@ export interface CreateCertificateProgramInput {
   description: string
   issuedDate: string
   validUntil: string | null
-  templateImage: File
+  templateImage?: File | null
   recipientsFile: File
   layout?: CertificateLayout
 }
@@ -71,7 +71,9 @@ export async function createCertificateProgram(input: CreateCertificateProgramIn
   if (input.validUntil) {
     fd.append("valid_until", input.validUntil)
   }
-  fd.append("template_image", input.templateImage)
+  if (input.templateImage) {
+    fd.append("template_image", input.templateImage)
+  }
   fd.append("recipients_file", input.recipientsFile)
   if (input.layout) {
     fd.append("layout", JSON.stringify(input.layout))

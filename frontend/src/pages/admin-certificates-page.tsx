@@ -96,7 +96,7 @@ export function AdminCertificatesPage() {
           </div>
         ) : programs.length === 0 ? (
           <p className="py-10 text-center text-sm text-[#5f5e5e]">
-            No batches yet. Create one to upload a template and recipient list.
+            No batches yet. Create one to upload a recipient list (a template image is optional).
           </p>
         ) : (
           <div className="space-y-3">

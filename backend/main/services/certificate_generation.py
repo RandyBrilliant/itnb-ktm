@@ -63,7 +63,12 @@ def generate_certificate_pdf(certificate) -> bytes:
     elements.append(Spacer(1, 1 * inch))
     elements.append(Paragraph("CERTIFICATE OF ACHIEVEMENT", title_style))
     elements.append(Paragraph("This is to certify that", certificate_text_style))
-    elements.append(Paragraph(certificate.user.full_name or certificate.user.email, name_style))
+    recipient_name = (
+        (getattr(certificate, "recipient_name", None) or "").strip()
+        or certificate.user.full_name
+        or certificate.user.email
+    )
+    elements.append(Paragraph(recipient_name, name_style))
     elements.append(Paragraph("Has successfully completed and received", certificate_text_style))
     elements.append(Paragraph(certificate.title, name_style))
 

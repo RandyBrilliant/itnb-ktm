@@ -91,7 +91,7 @@ export function CertificateLayoutEditor({ templateUrl, value, onChange }: Certif
   if (!templateUrl) {
     return (
       <p className="text-sm text-[#8a8a8a]">
-        Upload a certificate template to position the student name and ID on the artwork.
+        Upload a certificate template (optional) to position the student name and ID on the artwork.
       </p>
     )
   }

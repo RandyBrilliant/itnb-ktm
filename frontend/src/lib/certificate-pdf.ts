@@ -1,8 +1,7 @@
 import type { CertificateItem } from "@/api/certificates"
 
-/** True when the API can serve a PDF (stored file, legacy URL, or program template). */
-export function certificatePdfAvailable(cert: Pick<CertificateItem, "pdf_available" | "pdf_file" | "program">): boolean {
+/** True when the API can serve a PDF (template overlay, generic layout, stored file, or legacy URL). */
+export function certificatePdfAvailable(cert: Pick<CertificateItem, "pdf_available" | "pdf_file">): boolean {
   if (cert.pdf_available != null) return cert.pdf_available
-  if (cert.pdf_file) return true
-  return Boolean(cert.program?.template_image)
+  return true
 }

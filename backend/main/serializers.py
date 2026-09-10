@@ -102,13 +102,10 @@ class CertificateSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_pdf_available(self, obj: Certificate) -> bool:
-        if obj.pdf_file:
-            return True
-        if (obj.legacy_pdf_url or "").strip():
-            return True
-        program = obj.program
-        return bool(program and program.template_image)
+    def get_pdf_available(self, _obj: Certificate) -> bool:
+        # On-demand PDF: template overlay when artwork exists, otherwise a generic layout.
+        # Legacy rows may still redirect to a stored file or external URL.
+        return True
 
 
 class CertificateUpdateSerializer(serializers.ModelSerializer):
@@ -185,7 +182,7 @@ class CertificateProgramSerializer(serializers.ModelSerializer):
 
 
 class CertificateProgramCreateSerializer(serializers.ModelSerializer):
-    """Multipart create: A4 template image + Excel recipients."""
+    """Multipart create: optional A4 template image + Excel recipients."""
 
     layout = serializers.JSONField(required=False)
 
@@ -200,6 +197,9 @@ class CertificateProgramCreateSerializer(serializers.ModelSerializer):
             "valid_until",
             "layout",
         ]
+        extra_kwargs = {
+            "template_image": {"required": False, "allow_null": True},
+        }
 
     def validate_recipients_file(self, value):
         name = getattr(value, "name", "") or ""
@@ -684,18 +684,6 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
             getattr(self.instance, "auto_issue_certificate", True),
         )
         cert_template = attrs.get("certificate_template_image")
-        has_program = bool(
-            attrs.get("certificate_program")
-            or (self.instance and self.instance.certificate_program_id)
-        )
-        if auto_issue and not cert_template and not has_program:
-            raise serializers.ValidationError(
-                {
-                    "certificate_template_image": (
-                        "Upload a certificate template image when auto-issue is enabled."
-                    )
-                }
-            )
         if cert_template and not auto_issue:
             raise serializers.ValidationError(
                 {
@@ -734,7 +722,7 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
             **validated_data,
         )
 
-        if cert_fields["template_image"] is not None:
+        if webinar.auto_issue_certificate or cert_fields["template_image"] is not None:
             ensure_webinar_certificate_program(
                 webinar=webinar,
                 issued_by=request.user,
@@ -770,17 +758,18 @@ class WebinarCreateUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, key, value)
         instance.save()
 
-        if (
-            cert_fields["template_image"] is not None
-            or cert_fields["valid_until"] is not None
+        should_ensure_program = (
+            instance.auto_issue_certificate
+            or cert_fields["template_image"] is not None
             or (
-                cert_fields["layout"] is not None
+                instance.certificate_program_id
                 and (
-                    instance.certificate_program_id
-                    or cert_fields["template_image"] is not None
+                    cert_fields["valid_until"] is not None
+                    or cert_fields["layout"] is not None
                 )
             )
-        ):
+        )
+        if should_ensure_program:
             ensure_webinar_certificate_program(
                 webinar=instance,
                 issued_by=self.context["request"].user,
