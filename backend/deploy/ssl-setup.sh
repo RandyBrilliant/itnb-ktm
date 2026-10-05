@@ -164,17 +164,31 @@ persist_ssl_env() {
     done
 }
 
-install_renewal_cron() {
-    chmod +x "$SCRIPT_DIR/ssl-renew.sh"
-    local cron_line="0 3 * * * ${SCRIPT_DIR}/ssl-renew.sh >> ${PROJECT_DIR}/logs/ssl-renew.log 2>&1 ${CRON_MARKER}"
+install_renewal_hook() {
+    local hook_src="$SCRIPT_DIR/hooks/reload-nginx.sh"
+    local hook_dst="/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh"
+
+    [[ -f "$hook_src" ]] || err "Missing renewal hook: $hook_src"
+    chmod +x "$SCRIPT_DIR/ssl-renew.sh" "$hook_src"
+
+    # certbot.timer runs as root and executes this after a successful renewal.
+    # A user crontab cannot: certbot needs root to read /etc/letsencrypt.
+    sudo mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+    sudo cp "$hook_src" "$hook_dst"
+    sudo chmod 755 "$hook_dst"
+    ok "Deploy hook installed ($hook_dst)"
 
     if crontab -l 2>/dev/null | grep -qF "$CRON_MARKER"; then
-        ok "Renewal cron already installed"
-        return
+        crontab -l 2>/dev/null | grep -vF "$CRON_MARKER" | crontab -
+        ok "Removed non-root renewal cron"
     fi
 
-    (crontab -l 2>/dev/null || true; echo "$cron_line") | crontab -
-    ok "Auto-renewal cron installed (daily 03:00)"
+    if systemctl is-enabled certbot.timer >/dev/null 2>&1; then
+        ok "certbot.timer is enabled (renews twice daily, then reloads nginx)"
+    else
+        sudo systemctl enable --now certbot.timer
+        ok "Enabled certbot.timer"
+    fi
 }
 
 verify_https() {
@@ -195,13 +209,13 @@ ensure_nginx_running
 obtain_certificate
 enable_https_nginx
 persist_ssl_env
-install_renewal_cron
+install_renewal_hook
 verify_https
 
 echo ""
 ok "SSL setup complete"
 echo "  Domain:  https://${DOMAIN}"
-echo "  Renew:   ${SCRIPT_DIR}/ssl-renew.sh"
-echo "  Cron:    daily at 03:00 (certbot renew + nginx reload)"
+echo "  Renew:   sudo ${SCRIPT_DIR}/ssl-renew.sh"
+echo "  Timer:   certbot.timer (twice daily) reloads nginx via renewal-hooks/deploy"
 echo ""
 echo "Set on Vercel (portal.itnb.ac.id): VITE_API_URL=https://${DOMAIN}"

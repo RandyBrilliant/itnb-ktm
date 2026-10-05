@@ -1,7 +1,13 @@
 #!/bin/bash
-# Renew Let's Encrypt certificates and reload nginx (safe to run from cron).
+# Renew Let's Encrypt certificates and reload nginx.
+# Must run as root (certbot reads /etc/letsencrypt). Re-execs with sudo when it does not.
+# Day-to-day renewal is certbot.timer plus deploy/hooks/reload-nginx.sh.
 
 set -euo pipefail
+
+if [[ "$(id -u)" -ne 0 ]]; then
+    exec sudo "$0" "$@"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
