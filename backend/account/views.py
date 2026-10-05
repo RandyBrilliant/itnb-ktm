@@ -375,10 +375,16 @@ class LogoutView(APIView):
 
 
 class HealthCheckView(APIView):
-    """Lightweight health endpoint for load balancers and container checks."""
+    """Lightweight health endpoint for load balancers and container checks.
+
+    Exempt from the global anon throttle. Docker probes this every 30s from
+    127.0.0.1, which is more than the 100/hour anon limit, and that counter
+    lives in Redis so a new container stays blocked after recreate.
+    """
 
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = []
 
     def get(self, request):
         return Response({"status": "ok", "success": True}, status=status.HTTP_200_OK)
