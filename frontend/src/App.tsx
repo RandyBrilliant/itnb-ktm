@@ -251,6 +251,14 @@ function App() {
               }
             />
             <Route
+              path="/staff/id"
+              element={
+                <ProtectedRoute allowedRoles={["STAFF"]}>
+                  <MemberIdPage role="STAFF" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/staff/profile"
               element={
                 <ProtectedRoute allowedRoles={["STAFF"]}>
@@ -311,6 +319,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["LECTURER"]}>
                   <NewsPage role="LECTURER" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lecturer/id"
+              element={
+                <ProtectedRoute allowedRoles={["LECTURER"]}>
+                  <MemberIdPage role="LECTURER" />
                 </ProtectedRoute>
               }
             />

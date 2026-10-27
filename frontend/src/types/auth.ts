@@ -29,6 +29,7 @@ export interface User {
   date_of_birth?: string | null
   alumni_year?: number
   email_verified: boolean
+  position?: string
   requires_email_setup?: boolean
   pending_email_change?: string | null
   is_active: boolean

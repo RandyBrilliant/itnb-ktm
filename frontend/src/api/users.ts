@@ -10,6 +10,7 @@ export type CreateUserPayload = {
   password_confirm: string
   role: UserRole
   department?: string
+  position?: string
   institutional_id?: string | null
   is_active?: boolean
   alumni_year?: number | null
@@ -25,6 +26,7 @@ export type AdminUpdateUserPayload = {
   email?: string
   full_name?: string
   department?: string
+  position?: string
   institutional_id?: string | null
   is_active?: boolean
   /** Only student ↔ alumni switching on student-record edits (backend validates). */
@@ -45,6 +47,7 @@ function appendAdminUserFormFields(fd: FormData, payload: Omit<AdminUpdateUserPa
   if (payload.email !== undefined) fd.append("email", payload.email)
   if (payload.full_name !== undefined) fd.append("full_name", payload.full_name)
   if (payload.department !== undefined) fd.append("department", payload.department)
+  if (payload.position !== undefined) fd.append("position", payload.position)
   if (payload.institutional_id !== undefined) {
     fd.append("institutional_id", payload.institutional_id ?? "")
   }

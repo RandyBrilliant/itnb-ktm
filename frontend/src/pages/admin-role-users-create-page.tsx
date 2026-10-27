@@ -23,6 +23,7 @@ export function AdminRoleUsersCreatePage() {
   const [password, setPassword] = useState("")
   const [passwordConfirm, setPasswordConfirm] = useState("")
   const [department, setDepartment] = useState("")
+  const [position, setPosition] = useState("")
   const [institutionalId, setInstitutionalId] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [contactPhone, setContactPhone] = useState("")
@@ -55,7 +56,9 @@ export function AdminRoleUsersCreatePage() {
         password,
         password_confirm: passwordConfirm,
         role,
-        ...(showDepartment ? { department: department.trim() || undefined } : {}),
+        ...(showDepartment
+          ? { department: department.trim() || undefined, position: position.trim() }
+          : {}),
         institutional_id: institutionalId.trim() || null,
         is_active: isActive,
         ...(role === "LECTURER"
@@ -136,6 +139,19 @@ export function AdminRoleUsersCreatePage() {
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
                 className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
+              />
+            </label>
+          ) : null}
+
+          {showDepartment ? (
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Position</span>
+              <input
+                type="text"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
+                placeholder="e.g. Academic Administrator, Senior Lecturer"
               />
             </label>
           ) : null}

@@ -75,6 +75,12 @@ class CustomUser(AbstractUser):
         blank=True,
         help_text=_("Department (for Staff/Lecturer)."),
     )
+    position = models.CharField(
+        _("position"),
+        max_length=100,
+        blank=True,
+        help_text=_("Job title shown on the Staff/Lecturer ID card."),
+    )
     joined_date = models.DateTimeField(
         _("date joined"),
         default=timezone.now,

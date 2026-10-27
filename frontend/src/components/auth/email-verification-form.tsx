@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { requestEmailVerification, verifyEmailCode } from "@/api/auth"
 import { authKeys } from "@/hooks/use-auth-query"
@@ -11,6 +11,8 @@ export interface EmailVerificationFormProps {
   onComplete?: (user: User) => void
 }
 
+const AUTO_SENT_KEY_PREFIX = "email-verification-auto-sent:"
+
 export function EmailVerificationForm({ email, onComplete }: EmailVerificationFormProps) {
   const queryClient = useQueryClient()
   const [verificationCode, setVerificationCode] = useState("")
@@ -18,6 +20,7 @@ export function EmailVerificationForm({ email, onComplete }: EmailVerificationFo
   const [isSending, setIsSending] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const isSubmitting = isSending || isVerifying
+  const autoSendStarted = useRef(false)
 
   const handleSendCode = async () => {
     try {
@@ -32,6 +35,24 @@ export function EmailVerificationForm({ email, onComplete }: EmailVerificationFo
       setIsSending(false)
     }
   }
+
+  // Send the first code automatically; only once per browser session so a refresh doesn't invalidate it.
+  useEffect(() => {
+    if (!email || autoSendStarted.current) return
+    autoSendStarted.current = true
+    const key = `${AUTO_SENT_KEY_PREFIX}${email.toLowerCase()}`
+    try {
+      if (sessionStorage.getItem(key)) {
+        setCodeSent(true)
+        return
+      }
+      sessionStorage.setItem(key, "1")
+    } catch {
+      // Storage unavailable — still send once for this mount.
+    }
+    void handleSendCode()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email])
 
   const handleVerify = async () => {
     const code = verificationCode.trim()
@@ -56,9 +77,8 @@ export function EmailVerificationForm({ email, onComplete }: EmailVerificationFo
   return (
     <div className="space-y-5">
       <p className="text-sm leading-relaxed text-[#5f5e5e]">
-        {codeSent ? "Enter the 6-digit code sent to " : "We will send a 6-digit code to "}
-        <span className="font-semibold text-[#1a1c1c]">{email}</span>. If an administrator already
-        sent you a code, you can enter it below.
+        {codeSent ? "Enter the 6-digit code sent to " : "Sending a 6-digit code to "}
+        <span className="font-semibold text-[#1a1c1c]">{email}</span>.
       </p>
       <label className="block space-y-2">
         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">

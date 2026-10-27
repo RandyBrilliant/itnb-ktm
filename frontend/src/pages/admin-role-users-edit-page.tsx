@@ -26,6 +26,7 @@ export function AdminRoleUsersEditPage() {
   const [email, setEmail] = useState("")
   const [fullName, setFullName] = useState("")
   const [department, setDepartment] = useState("")
+  const [position, setPosition] = useState("")
   const [institutionalId, setInstitutionalId] = useState("")
   const [isActive, setIsActive] = useState(true)
   const [contactPhone, setContactPhone] = useState("")
@@ -62,6 +63,7 @@ export function AdminRoleUsersEditPage() {
     setEmail(user.email)
     setFullName(user.full_name ?? "")
     setDepartment(user.department ?? "")
+    setPosition(user.position ?? "")
     setInstitutionalId(user.institutional_id ?? "")
     setIsActive(user.is_active)
     if (user.role === "LECTURER") {
@@ -91,7 +93,7 @@ export function AdminRoleUsersEditPage() {
         ...(role === "ADMIN"
           ? { department: "" }
           : showDepartment
-            ? { department: department.trim() || undefined }
+            ? { department: department.trim() || undefined, position: position.trim() }
             : {}),
         institutional_id: institutionalId.trim() || null,
         is_active: isActive,
@@ -188,6 +190,19 @@ export function AdminRoleUsersEditPage() {
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
                 className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
+              />
+            </label>
+          ) : null}
+
+          {showDepartment ? (
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Position</span>
+              <input
+                type="text"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
+                placeholder="e.g. Academic Administrator, Senior Lecturer"
               />
             </label>
           ) : null}

@@ -37,11 +37,13 @@ function buildMemberNav(
 
 const staffItems: RoleNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", href: "/staff" },
+  { id: "id", label: "ID", icon: "badge", href: "/staff/id" },
   { id: "news", label: "News", icon: "newspaper", href: "/staff/news" },
 ]
 
 const lecturerItems: RoleNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", href: "/lecturer" },
+  { id: "id", label: "ID", icon: "badge", href: "/lecturer/id" },
   {
     id: "news",
     label: "News",

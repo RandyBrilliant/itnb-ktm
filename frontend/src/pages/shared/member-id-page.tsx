@@ -30,7 +30,14 @@ const FALLBACK = {
   qrImageUrl: "",
 }
 
+const EMPLOYEE_LABELS: Partial<Record<UserRole, { idLabel: string; roleLabel: string }>> = {
+  STAFF: { idLabel: "Staff ID", roleLabel: "Staff" },
+  LECTURER: { idLabel: "Lecturer ID", roleLabel: "Lecturer" },
+}
+
 export function MemberIdPage({ role }: { role: UserRole }) {
+  const employeeLabels = EMPLOYEE_LABELS[role]
+  const isEmployee = !!employeeLabels
   const [flipped, setFlipped] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [frontBackgroundFailed, setFrontBackgroundFailed] = useState(false)
@@ -42,6 +49,7 @@ export function MemberIdPage({ role }: { role: UserRole }) {
   const { data: card } = useQuery({
     queryKey: [role, "id-card"],
     queryFn: getMyCard,
+    enabled: !isEmployee,
   })
 
   const frontBackgroundUrl =
@@ -59,22 +67,41 @@ export function MemberIdPage({ role }: { role: UserRole }) {
     setBackBackgroundFailed(false)
   }, [backBackgroundUrl])
 
-  const model: DigitalIdCardData = {
-    name: me?.full_name || FALLBACK.name,
-    studentId: me?.institutional_id || card?.card_number || FALLBACK.studentId,
-    major: me?.department || FALLBACK.major,
-    birthPlaceDate: formatBirthPlaceDate(me?.place_of_birth, me?.date_of_birth) || FALLBACK.birthPlaceDate,
-    degree: role === "ALUMNI" ? "Alumni" : "Bachelor Degree",
-    validThru: card?.valid_until ? formatAppMonthYear(card.valid_until) : FALLBACK.validThru,
-    photoUrl:
-      resolveMediaUrl(me?.photo) ||
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        me?.full_name || FALLBACK.name
-      )}&background=b11324&color=ffffff&size=512`,
-    qrImageUrl: resolveMediaUrl(card?.qr_code) || FALLBACK.qrImageUrl,
-  }
+  const photoUrl =
+    resolveMediaUrl(me?.photo) ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      me?.full_name || FALLBACK.name
+    )}&background=b11324&color=ffffff&size=512`
 
-  const credentialLabel = role === "ALUMNI" ? "Alumni Credential" : "Student Credential"
+  const model: DigitalIdCardData = employeeLabels
+    ? {
+        name: me?.full_name || "—",
+        studentId: me?.institutional_id || "—",
+        idLabel: employeeLabels.idLabel,
+        major: me?.department || "—",
+        position: me?.position || "—",
+        birthPlaceDate: "",
+        degree: employeeLabels.roleLabel,
+        validThru: "",
+        photoUrl,
+        qrImageUrl: "",
+      }
+    : {
+        name: me?.full_name || FALLBACK.name,
+        studentId: me?.institutional_id || card?.card_number || FALLBACK.studentId,
+        major: me?.department || FALLBACK.major,
+        birthPlaceDate: formatBirthPlaceDate(me?.place_of_birth, me?.date_of_birth) || FALLBACK.birthPlaceDate,
+        degree: role === "ALUMNI" ? "Alumni" : "Bachelor Degree",
+        validThru: card?.valid_until ? formatAppMonthYear(card.valid_until) : FALLBACK.validThru,
+        photoUrl,
+        qrImageUrl: resolveMediaUrl(card?.qr_code) || FALLBACK.qrImageUrl,
+      }
+
+  const credentialLabel = employeeLabels
+    ? `${employeeLabels.roleLabel} Credential`
+    : role === "ALUMNI"
+      ? "Alumni Credential"
+      : "Student Credential"
   const studentId = model.studentId.replace(/[^\w-]+/g, "-")
 
   const handleDownload = async () => {
@@ -129,6 +156,7 @@ export function MemberIdPage({ role }: { role: UserRole }) {
         <div className="overflow-hidden rounded-xl [perspective:1200px]">
           <DigitalIdCard
             flipped={flipped}
+            variant={isEmployee ? "employee" : "member"}
             onFlip={() => setFlipped((prev) => !prev)}
             frontBackgroundUrl={frontBackgroundUrl}
             backBackgroundUrl={backBackgroundUrl}
