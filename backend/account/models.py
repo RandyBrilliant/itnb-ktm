@@ -279,7 +279,7 @@ class DigitalCard(models.Model):
 
     CARD_TYPES = [
         ("STUDENT", _("Student Card")),
-        ("LECTURER", _("Staff Card")),
+        ("LECTURER", _("Lecturer Card")),
         ("STAFF", _("Staff Card")),
         ("ALUMNI", _("Alumni Card")),
     ]

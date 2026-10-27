@@ -20,6 +20,7 @@ export interface CardTemplateData {
 
 export interface CardVerificationResult {
   student_id: string
+  id_label?: string
   verified: boolean
   valid_until: string
 }

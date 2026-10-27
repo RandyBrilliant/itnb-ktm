@@ -892,6 +892,16 @@ class DigitalCardViewSet(viewsets.ReadOnlyModelViewSet):
         card = DigitalCard.objects.filter(user=request.user).first()
         if card is None:
             card = self._create_card_for_user(request.user, request)
+        else:
+            try:
+                self._ensure_qr_code(card)
+            except Exception as exc:
+                logger.warning(
+                    "QR generation failed for user_id=%s card_id=%s: %s",
+                    request.user.id,
+                    card.id,
+                    exc,
+                )
 
         serializer = self.get_serializer(card)
         return Response(
@@ -945,23 +955,15 @@ class DigitalCardViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
         try:
-            qr_payload = f"{settings.FRONTEND_URL}/verify-card/{card.card_number}"
-            qr_image = generate_qr_code(qr_payload)
-            qr_bytes = save_qr_to_bytes(qr_image)
-            card.qr_code.save(f"qr-{card.card_number}.png", ContentFile(qr_bytes.read()), save=False)
-
-            update_fields = ["qr_code"]
+            self._ensure_qr_code(card)
             if getattr(settings, "GENERATE_CARD_IMAGE_ON_CREATE", False):
                 card_image = generate_digital_card_image(user, card.card_type)
                 card_bytes = save_card_image_to_bytes(card_image)
                 card.card_image.save(
                     f"card-{card.card_number}.png",
                     ContentFile(card_bytes.read()),
-                    save=False,
+                    save=True,
                 )
-                update_fields.append("card_image")
-
-            card.save(update_fields=update_fields)
         except Exception as exc:
             logger.warning(
                 "Card assets generation failed for user_id=%s card_id=%s: %s",
@@ -971,6 +973,27 @@ class DigitalCardViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         return card
+
+    def _ensure_qr_code(self, card):
+        """Write the verification QR when the card does not have one yet."""
+        if getattr(card.qr_code, "name", ""):
+            return
+        qr_payload = f"{settings.FRONTEND_URL}/verify-card/{card.card_number}"
+        qr_image = generate_qr_code(qr_payload)
+        qr_bytes = save_qr_to_bytes(qr_image)
+        card.qr_code.save(
+            f"qr-{card.card_number}.png",
+            ContentFile(qr_bytes.read()),
+            save=True,
+        )
+
+
+def _holder_id_label(role: str) -> str:
+    if role == UserRole.STAFF:
+        return "Staff ID"
+    if role == UserRole.LECTURER:
+        return "Lecturer ID"
+    return "Student ID"
 
 
 class VerifyCardView(APIView):
@@ -1005,6 +1028,7 @@ class VerifyCardView(APIView):
             success_response(
                 data={
                     "student_id": user.institutional_id or "",
+                    "id_label": _holder_id_label(user.role),
                     "verified": verified,
                     "valid_until": valid_until.isoformat(),
                 }

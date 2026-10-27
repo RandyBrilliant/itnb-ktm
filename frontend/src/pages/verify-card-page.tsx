@@ -44,7 +44,7 @@ export function VerifyCardPage() {
               Digital ID Verification
             </h1>
             <p className="mt-2 text-sm text-[#5f5e5e]">
-              Scan result — official student card check
+              Scan result — official ID card check
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export function VerifyCardPage() {
                 </div>
 
                 <VerificationRow
-                  label="Student ID"
+                  label={data.id_label || "Student ID"}
                   value={data.student_id || "—"}
                 />
                 <VerificationRow

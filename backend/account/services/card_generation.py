@@ -22,6 +22,14 @@ FONT_FALLBACK = "arial.ttf"
 LABEL_COLOR = "#b11324"
 VALUE_COLOR = "#111111"
 
+# Same front as the student card; only the role wording changes.
+_CARD_COPY = {
+    "STAFF": ("Staff ID", "Staff"),
+    "LECTURER": ("Lecturer ID", "Lecturer"),
+    "ALUMNI": ("Student ID", "Alumni"),
+    "STUDENT": ("Student ID", "Bachelor Degree"),
+}
+
 
 @lru_cache(maxsize=4)
 def _load_template(path: Optional[str]) -> Optional[Image.Image]:
@@ -80,7 +88,8 @@ def generate_digital_card_image(user, card_type: str) -> Image.Image:
     degree_font = _load_font(40)
     valid_font = _load_font(30)
 
-    name = (user.full_name or "Student").strip()
+    id_label, degree_label = _CARD_COPY.get(card_type, _CARD_COPY["STUDENT"])
+    name = (user.full_name or card_type.title()).strip()
     department = (user.department or card_type.title()).strip()
     card_number = getattr(getattr(user, "digital_card", None), "card_number", None) or "-"
     card = getattr(user, "digital_card", None)
@@ -100,12 +109,12 @@ def generate_digital_card_image(user, card_type: str) -> Image.Image:
 
     content_x = 112
     _draw_field(draw, content_x, 400, "Name", name, label_font, name_font)
-    _draw_field(draw, content_x, 470, "Student ID", card_number, label_font, value_font)
+    _draw_field(draw, content_x, 470, id_label, card_number, label_font, value_font)
     _draw_field(draw, content_x, 535, "Major", department, label_font, value_font)
     _draw_field(draw, content_x, 600, "Place, Date of Birth", birth_text, label_font, value_font)
 
     draw.line((content_x, 680, 430, 680), fill="#21212133", width=1)
-    draw.text((content_x, 700), "Bachelor Degree", fill=LABEL_COLOR, font=degree_font)
+    draw.text((content_x, 700), degree_label, fill=LABEL_COLOR, font=degree_font)
     draw.text((content_x, 752), "Valid Thru", fill=LABEL_COLOR, font=label_font)
     draw.text((content_x, 778), valid_until_text, fill=VALUE_COLOR, font=valid_font)
 
