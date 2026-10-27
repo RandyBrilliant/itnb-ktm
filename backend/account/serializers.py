@@ -288,7 +288,12 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
     contact_phone = serializers.CharField(required=False, allow_blank=True)
     address = serializers.CharField(required=False, allow_blank=True)
     role = serializers.ChoiceField(
-        choices=[UserRole.STUDENT.value, UserRole.ALUMNI.value],
+        choices=[
+            UserRole.STUDENT.value,
+            UserRole.ALUMNI.value,
+            UserRole.STAFF.value,
+            UserRole.LECTURER.value,
+        ],
         required=False,
     )
     alumni_year = serializers.IntegerField(required=False, allow_null=True)
@@ -333,16 +338,18 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
             attrs["department"] = ""
 
         if "role" in attrs:
-            if self.instance.role not in (UserRole.STUDENT, UserRole.ALUMNI):
-                raise serializers.ValidationError(
-                    {"role": "Only student or alumni records can change role here."}
-                )
-            if attrs["role"] == UserRole.STUDENT.value:
-                attrs["role"] = UserRole.STUDENT
-            elif attrs["role"] == UserRole.ALUMNI.value:
-                attrs["role"] = UserRole.ALUMNI
+            current = self.instance.role
+            new_role = attrs["role"]
+            if current in (UserRole.STUDENT, UserRole.ALUMNI):
+                if new_role not in (UserRole.STUDENT, UserRole.ALUMNI):
+                    raise serializers.ValidationError({"role": "Role must be Student or Alumni."})
+            elif current in (UserRole.STAFF, UserRole.LECTURER):
+                if new_role not in (UserRole.STAFF, UserRole.LECTURER):
+                    raise serializers.ValidationError({"role": "Role must be Staff or Lecturer."})
             else:
-                raise serializers.ValidationError({"role": "Role must be Student or Alumni."})
+                raise serializers.ValidationError(
+                    {"role": "This record's role cannot be changed here."}
+                )
 
         role = attrs.get("role", self.instance.role)
         return _validate_student_role_department(attrs, role, instance=self.instance)
@@ -354,7 +361,31 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
         if validated_data.get("role") == UserRole.STUDENT:
             validated_data["alumni_year"] = None
 
+        previous_role = instance.role
         user = super().update(instance, validated_data)
+
+        if user.role in (UserRole.STAFF, UserRole.LECTURER) and user.role != previous_role:
+            if user.role == UserRole.STAFF:
+                user.is_staff = True
+                StaffProfile.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        "staff_role": "",
+                        "can_issue_certificates": False,
+                        "can_manage_benefits": False,
+                    },
+                )
+            else:
+                user.is_staff = False
+                LecturerProfile.objects.get_or_create(user=user)
+            user.save(update_fields=["is_staff"])
+            try:
+                card = user.digital_card
+            except DigitalCard.DoesNotExist:
+                card = None
+            if card is not None and card.card_type != user.role:
+                card.card_type = user.role
+                card.save(update_fields=["card_type", "updated_at"])
 
         if lec_payload and user.role == UserRole.LECTURER:
             profile, _ = LecturerProfile.objects.get_or_create(user=user)

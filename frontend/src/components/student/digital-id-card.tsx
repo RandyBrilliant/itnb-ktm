@@ -20,7 +20,23 @@ export interface DigitalIdCardData {
   qrImageUrl: string
   /** Defaults to "Student ID". Staff and lecturer pass their own label. */
   idLabel?: string
+  /** Defaults to "Major". */
+  majorLabel?: string
+  /** Defaults to "Place, Date of Birth". Staff and lecturer use "Position". */
+  detailLabel?: string
+  /** Student and alumni cards show an expiry. Staff and lecturer do not. */
+  showValidThru?: boolean
 }
+
+export const EMPLOYEE_CARD_ART = {
+  STAFF: { front: "/img/card-bg-staff.jpg", back: "/img/card-bg-back-staff.jpg" },
+  LECTURER: { front: "/img/card-bg-lecturer.jpg", back: "/img/card-bg-back-lecturer.jpg" },
+} as const
+
+export const EMPLOYEE_CARD_COPY = {
+  STAFF: { idLabel: "Staff ID", roleLabel: "Staff", credential: "Staff Credential" },
+  LECTURER: { idLabel: "Lecturer ID", roleLabel: "Lecturer", credential: "Lecturer Credential" },
+} as const
 
 interface DigitalIdCardProps {
   flipped: boolean
@@ -145,8 +161,8 @@ function CardFrontContent({
       <div className="flex flex-col gap-[1.1cqh] px-[4.5cqw] py-[1.5cqh]">
         <CardField label="Name" value={data.name} variant="name" />
         <CardField label={data.idLabel ?? "Student ID"} value={data.studentId} />
-        <CardField label="Major" value={data.major} />
-        <CardField label="Place, Date of Birth" value={data.birthPlaceDate} />
+        <CardField label={data.majorLabel ?? "Major"} value={data.major} />
+        <CardField label={data.detailLabel ?? "Place, Date of Birth"} value={data.birthPlaceDate} />
       </div>
 
       <div className="mx-[4.5cqw] border-t border-[#212121]/25" aria-hidden />
@@ -156,14 +172,16 @@ function CardFrontContent({
           <p className="break-words text-[clamp(0.8rem,4.6cqw,1.12rem)] font-extrabold leading-tight text-[#b11324]">
             {data.degree}
           </p>
-          <div className="mt-[0.8cqh]">
-            <p className="text-[clamp(0.52rem,2.65cqw,0.72rem)] font-semibold leading-none text-[#b11324]">
-              Valid Thru
-            </p>
-            <p className="mt-[0.5cqh] text-[clamp(0.68rem,3.45cqw,0.92rem)] font-semibold leading-snug text-[#212121]">
-              {data.validThru}
-            </p>
-          </div>
+          {data.showValidThru !== false ? (
+            <div className="mt-[0.8cqh]">
+              <p className="text-[clamp(0.52rem,2.65cqw,0.72rem)] font-semibold leading-none text-[#b11324]">
+                Valid Thru
+              </p>
+              <p className="mt-[0.5cqh] text-[clamp(0.68rem,3.45cqw,0.92rem)] font-semibold leading-snug text-[#212121]">
+                {data.validThru}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="aspect-square h-[17cqh] shrink-0 overflow-hidden rounded-[8px] border-[3px] border-[#8f2634] bg-white">

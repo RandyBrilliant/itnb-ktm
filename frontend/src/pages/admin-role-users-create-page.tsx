@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { createUser } from "@/api/users"
+import { EmployeeIdCardPreview } from "@/components/admin/employee-id-card-preview"
 import { ThemedCheckbox } from "@/components/ui/themed-checkbox"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
@@ -26,6 +27,9 @@ export function AdminRoleUsersCreatePage() {
   const [position, setPosition] = useState("")
   const [institutionalId, setInstitutionalId] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [cardRole, setCardRole] = useState<"STAFF" | "LECTURER">(
+    role === "LECTURER" ? "LECTURER" : "STAFF"
+  )
   const [contactPhone, setContactPhone] = useState("")
   const [address, setAddress] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -36,7 +40,9 @@ export function AdminRoleUsersCreatePage() {
 
   const labels = DIRECTORY_ROLE_LABELS[role]
   const pathSegment = directoryRoleToSegment(role)
-  const showDepartment = role === "STAFF" || role === "LECTURER"
+  const showEmployeeCard = role === "STAFF" || role === "LECTURER"
+  const showDepartment = showEmployeeCard
+  const savedRole = showEmployeeCard ? cardRole : role
 
   const handleSubmit = async () => {
     if (!email.trim() || !fullName.trim()) {
@@ -55,13 +61,13 @@ export function AdminRoleUsersCreatePage() {
         full_name: fullName.trim(),
         password,
         password_confirm: passwordConfirm,
-        role,
+        role: savedRole,
         ...(showDepartment
           ? { department: department.trim() || undefined, position: position.trim() }
           : {}),
         institutional_id: institutionalId.trim() || null,
         is_active: isActive,
-        ...(role === "LECTURER"
+        ...(savedRole === "LECTURER"
           ? {
               contact_phone: contactPhone.trim(),
               address: address.trim(),
@@ -70,7 +76,7 @@ export function AdminRoleUsersCreatePage() {
       })
       await queryClient.invalidateQueries({ queryKey: userKeys.all })
       toast.success("Record saved")
-      navigate(`/admin/users/${pathSegment}`, { replace: true })
+      navigate(`/admin/users/${directoryRoleToSegment(savedRole)}`, { replace: true })
     } catch (error) {
       toast.error("Could not save record", getUserFriendlyError(error, "generic"))
     } finally {
@@ -86,8 +92,22 @@ export function AdminRoleUsersCreatePage() {
         <p className="mt-1 text-sm text-[#5f5e5e]">{labels.listSubtitle}</p>
       </div>
 
+      <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[minmax(0,36rem)_320px]">
       <div className="rounded-sm border border-[#e2e2e2] bg-white p-6 shadow-[32px_0_32px_rgba(175,15,36,0.04)]">
         <div className="grid max-w-xl grid-cols-1 gap-4">
+          {showEmployeeCard ? (
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Role</span>
+              <select
+                value={cardRole}
+                onChange={(e) => setCardRole(e.target.value === "LECTURER" ? "LECTURER" : "STAFF")}
+                className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
+              >
+                <option value="STAFF">Staff</option>
+                <option value="LECTURER">Lecturer</option>
+              </select>
+            </label>
+          ) : null}
           <label className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Email</span>
             <input
@@ -174,7 +194,7 @@ export function AdminRoleUsersCreatePage() {
             label="Active account"
           />
 
-          {role === "LECTURER" ? (
+          {savedRole === "LECTURER" ? (
             <>
               <label className="space-y-1">
                 <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Contact phone</span>
@@ -214,6 +234,17 @@ export function AdminRoleUsersCreatePage() {
             </Link>
           </div>
         </div>
+      </div>
+      {showEmployeeCard ? (
+        <EmployeeIdCardPreview
+          cardRole={cardRole}
+          name={fullName}
+          institutionalId={institutionalId}
+          department={department}
+          position={position}
+          photoUrl=""
+        />
+      ) : null}
       </div>
     </div>
   )

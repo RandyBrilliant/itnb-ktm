@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { getUser, updateUser } from "@/api/users"
+import { EmployeeIdCardPreview } from "@/components/admin/employee-id-card-preview"
 import { ProfilePhotoField } from "@/components/profile/profile-photo-field"
 import { UserAccountMetadata } from "@/components/profile/user-account-metadata"
 import { AdminUserEmailActionsCard } from "@/components/admin/admin-user-email-actions-card"
@@ -29,6 +30,10 @@ export function AdminRoleUsersEditPage() {
   const [position, setPosition] = useState("")
   const [institutionalId, setInstitutionalId] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [cardRole, setCardRole] = useState<"STAFF" | "LECTURER">(
+    role === "LECTURER" ? "LECTURER" : "STAFF"
+  )
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState("")
   const [contactPhone, setContactPhone] = useState("")
   const [address, setAddress] = useState("")
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -41,7 +46,8 @@ export function AdminRoleUsersEditPage() {
 
   const labels = DIRECTORY_ROLE_LABELS[role]
   const pathSegment = directoryRoleToSegment(role)
-  const showDepartment = role === "STAFF" || role === "LECTURER"
+  const showEmployeeCard = role === "STAFF" || role === "LECTURER"
+  const showDepartment = showEmployeeCard
 
   const { data: user, isLoading, isError } = useQuery({
     queryKey: ["admin-user-edit", userId],
@@ -66,6 +72,9 @@ export function AdminRoleUsersEditPage() {
     setPosition(user.position ?? "")
     setInstitutionalId(user.institutional_id ?? "")
     setIsActive(user.is_active)
+    if (user.role === "STAFF" || user.role === "LECTURER") {
+      setCardRole(user.role)
+    }
     if (user.role === "LECTURER") {
       setContactPhone(user.lecturer_profile?.contact_phone ?? "")
       setAddress(user.lecturer_profile?.address ?? "")
@@ -76,6 +85,16 @@ export function AdminRoleUsersEditPage() {
 
   useEffect(() => {
     if (photoFile) setPhotoRemoved(false)
+  }, [photoFile])
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPreviewPhotoUrl("")
+      return
+    }
+    const url = URL.createObjectURL(photoFile)
+    setPreviewPhotoUrl(url)
+    return () => URL.revokeObjectURL(url)
   }, [photoFile])
 
   const handleSubmit = async () => {
@@ -93,11 +112,11 @@ export function AdminRoleUsersEditPage() {
         ...(role === "ADMIN"
           ? { department: "" }
           : showDepartment
-            ? { department: department.trim() || undefined, position: position.trim() }
+            ? { department: department.trim() || undefined, position: position.trim(), role: cardRole }
             : {}),
         institutional_id: institutionalId.trim() || null,
         is_active: isActive,
-        ...(role === "LECTURER"
+        ...(cardRole === "LECTURER" && showEmployeeCard
           ? {
               contact_phone: contactPhone.trim(),
               address: address.trim(),
@@ -110,7 +129,8 @@ export function AdminRoleUsersEditPage() {
       await queryClient.invalidateQueries({ queryKey: userKeys.all })
       await queryClient.invalidateQueries({ queryKey: ["admin-user-edit", userId] })
       toast.success("Record updated")
-      navigate(`/admin/users/${pathSegment}`, { replace: true })
+      const nextSegment = showEmployeeCard ? directoryRoleToSegment(cardRole) : pathSegment
+      navigate(`/admin/users/${nextSegment}`, { replace: true })
     } catch (error) {
       toast.error("Could not save record", getUserFriendlyError(error, "generic"))
     } finally {
@@ -152,6 +172,20 @@ export function AdminRoleUsersEditPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className="rounded-sm border border-[#e2e2e2] bg-white p-6 shadow-[32px_0_32px_rgba(175,15,36,0.04)] lg:col-span-3">
         <div className="grid max-w-xl grid-cols-1 gap-4">
+          {showEmployeeCard ? (
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Role</span>
+              <select
+                value={cardRole}
+                onChange={(e) => setCardRole(e.target.value === "LECTURER" ? "LECTURER" : "STAFF")}
+                className="w-full border border-[#d5d5d5] px-3 py-2 text-sm outline-none focus:border-[#af0f24]"
+              >
+                <option value="STAFF">Staff</option>
+                <option value="LECTURER">Lecturer</option>
+              </select>
+            </label>
+          ) : null}
+
           <ProfilePhotoField
             file={photoFile}
             existingImageUrl={user.photo && !photoRemoved ? resolveMediaUrl(user.photo) : ""}
@@ -225,7 +259,7 @@ export function AdminRoleUsersEditPage() {
             label="Active account"
           />
 
-          {role === "LECTURER" ? (
+          {showEmployeeCard && cardRole === "LECTURER" ? (
             <>
               <label className="space-y-1">
                 <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#5f5e5e]">Contact phone</span>
@@ -268,6 +302,19 @@ export function AdminRoleUsersEditPage() {
         </div>
 
         <div className="lg:col-span-1 space-y-4">
+          {showEmployeeCard ? (
+            <EmployeeIdCardPreview
+              cardRole={cardRole}
+              name={fullName}
+              institutionalId={institutionalId}
+              department={department}
+              position={position}
+              photoUrl={
+                previewPhotoUrl ||
+                (user.photo && !photoRemoved ? resolveMediaUrl(user.photo) : "")
+              }
+            />
+          ) : null}
           <AdminUserEmailActionsCard
             user={user}
             onActionSuccess={() => {

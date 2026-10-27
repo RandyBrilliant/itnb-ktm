@@ -117,16 +117,22 @@ def generate_digital_card_image(user, card_type: str) -> Image.Image:
     else:
         birth_text = "-"
 
+    is_employee = card_type in ("STAFF", "LECTURER")
+    third_label = "Department" if is_employee else "Major"
+    fourth_label = "Position" if is_employee else "Place, Date of Birth"
+    fourth_value = ((getattr(user, "position", None) or "").strip() or "-") if is_employee else birth_text
+
     content_x = 112
     _draw_field(draw, content_x, 400, "Name", name, label_font, name_font)
     _draw_field(draw, content_x, 470, id_label, card_number, label_font, value_font)
-    _draw_field(draw, content_x, 535, "Major", department, label_font, value_font)
-    _draw_field(draw, content_x, 600, "Place, Date of Birth", birth_text, label_font, value_font)
+    _draw_field(draw, content_x, 535, third_label, department, label_font, value_font)
+    _draw_field(draw, content_x, 600, fourth_label, fourth_value, label_font, value_font)
 
     draw.line((content_x, 680, 430, 680), fill="#21212133", width=1)
     draw.text((content_x, 700), degree_label, fill=LABEL_COLOR, font=degree_font)
-    draw.text((content_x, 752), "Valid Thru", fill=LABEL_COLOR, font=label_font)
-    draw.text((content_x, 778), valid_until_text, fill=VALUE_COLOR, font=valid_font)
+    if not is_employee:
+        draw.text((content_x, 752), "Valid Thru", fill=LABEL_COLOR, font=label_font)
+        draw.text((content_x, 778), valid_until_text, fill=VALUE_COLOR, font=valid_font)
 
     # 3:4 portrait slot (177×236), horizontally centered on the former square slot.
     photo_field = (248, 132, 425, 368)

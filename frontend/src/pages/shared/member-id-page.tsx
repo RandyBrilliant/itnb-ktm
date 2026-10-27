@@ -5,6 +5,8 @@ import {
   CARD_BACKGROUND_URL,
   CARD_BACK_BACKGROUND_URL,
   DigitalIdCard,
+  EMPLOYEE_CARD_ART,
+  EMPLOYEE_CARD_COPY,
   type DigitalIdCardData,
 } from "@/components/student/digital-id-card"
 import { useMeQuery } from "@/hooks/use-auth-query"
@@ -31,15 +33,8 @@ const FALLBACK = {
 }
 
 const ROLE_COPY: Partial<Record<UserRole, { idLabel: string; roleLabel: string; credential: string }>> = {
-  STAFF: { idLabel: "Staff ID", roleLabel: "Staff", credential: "Staff Credential" },
-  LECTURER: { idLabel: "Lecturer ID", roleLabel: "Lecturer", credential: "Lecturer Credential" },
+  ...EMPLOYEE_CARD_COPY,
   ALUMNI: { idLabel: "Student ID", roleLabel: "Alumni", credential: "Alumni Credential" },
-}
-
-/** Student artwork with the spine and back copy renamed for that role. */
-const ROLE_CARD_ART: Partial<Record<UserRole, { front: string; back: string }>> = {
-  STAFF: { front: "/img/card-bg-staff.jpg", back: "/img/card-bg-back-staff.jpg" },
-  LECTURER: { front: "/img/card-bg-lecturer.jpg", back: "/img/card-bg-back-lecturer.jpg" },
 }
 
 export function MemberIdPage({ role }: { role: UserRole }) {
@@ -57,7 +52,9 @@ export function MemberIdPage({ role }: { role: UserRole }) {
     queryFn: getMyCard,
   })
 
-  const roleArt = ROLE_CARD_ART[role]
+  const roleArt =
+    role === "STAFF" || role === "LECTURER" ? EMPLOYEE_CARD_ART[role] : undefined
+  const isEmployee = roleArt != null
   const frontBackgroundUrl = roleArt
     ? resolvePublicAssetUrl(roleArt.front)
     : resolveMediaUrl(env.VITE_ID_CARD_FRONT_TEMPLATE_URL) ||
@@ -81,18 +78,24 @@ export function MemberIdPage({ role }: { role: UserRole }) {
       me?.full_name || FALLBACK.name
     )}&background=b11324&color=ffffff&size=512`
 
-  const emptyValue = role === "STAFF" || role === "LECTURER" ? "—" : undefined
+  const emptyValue = isEmployee ? "—" : undefined
   const model: DigitalIdCardData = {
     name: me?.full_name || emptyValue || FALLBACK.name,
     studentId: me?.institutional_id || card?.card_number || emptyValue || FALLBACK.studentId,
     idLabel: roleCopy?.idLabel ?? "Student ID",
+    majorLabel: isEmployee ? "Department" : "Major",
     major: me?.department || emptyValue || FALLBACK.major,
-    birthPlaceDate:
-      formatBirthPlaceDate(me?.place_of_birth, me?.date_of_birth) || emptyValue || FALLBACK.birthPlaceDate,
+    detailLabel: isEmployee ? "Position" : "Place, Date of Birth",
+    birthPlaceDate: isEmployee
+      ? me?.position || "—"
+      : formatBirthPlaceDate(me?.place_of_birth, me?.date_of_birth) || FALLBACK.birthPlaceDate,
     degree: roleCopy?.roleLabel ?? "Bachelor Degree",
-    validThru: card?.valid_until
-      ? formatAppMonthYear(card.valid_until)
-      : emptyValue || FALLBACK.validThru,
+    showValidThru: !isEmployee,
+    validThru: isEmployee
+      ? ""
+      : card?.valid_until
+        ? formatAppMonthYear(card.valid_until)
+        : FALLBACK.validThru,
     photoUrl,
     qrImageUrl: resolveMediaUrl(card?.qr_code) || FALLBACK.qrImageUrl,
   }

@@ -29,8 +29,8 @@ export type AdminUpdateUserPayload = {
   position?: string
   institutional_id?: string | null
   is_active?: boolean
-  /** Only student ↔ alumni switching on student-record edits (backend validates). */
-  role?: "STUDENT" | "ALUMNI"
+  /** Student ↔ alumni, or staff ↔ lecturer. Backend rejects other switches. */
+  role?: "STUDENT" | "ALUMNI" | "STAFF" | "LECTURER"
   alumni_year?: number | null
   staff_role?: string
   can_issue_certificates?: boolean

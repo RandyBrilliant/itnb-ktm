@@ -27,7 +27,7 @@ function buildMemberNav(
   }
 
   if (options.includePerks) {
-    items.push({ id: "perks", label: "Perks", icon: "loyalty", href: `${basePath}/perks` })
+    items.push({ id: "perks", label: "Benefits", icon: "loyalty", href: `${basePath}/perks` })
   }
 
   items.push({ id: "news", label: "News", icon: "newspaper", href: `${basePath}/news` })
@@ -38,12 +38,14 @@ function buildMemberNav(
 const staffItems: RoleNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", href: "/staff" },
   { id: "id", label: "ID", icon: "badge", href: "/staff/id" },
+  { id: "perks", label: "Benefits", icon: "loyalty", href: "/staff/perks" },
   { id: "news", label: "News", icon: "newspaper", href: "/staff/news" },
 ]
 
 const lecturerItems: RoleNavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard", href: "/lecturer" },
   { id: "id", label: "ID", icon: "badge", href: "/lecturer/id" },
+  { id: "perks", label: "Benefits", icon: "loyalty", href: "/lecturer/perks" },
   {
     id: "news",
     label: "News",
@@ -55,7 +57,7 @@ const lecturerItems: RoleNavItem[] = [
 export function getRoleNavigation(role: UserRole): RoleNavItem[] {
   switch (role) {
     case "STUDENT":
-      return buildMemberNav("/student", { includeScores: true, includePerks: false })
+      return buildMemberNav("/student", { includeScores: true, includePerks: true })
     case "ALUMNI":
       return buildMemberNav("/alumni", { includeScores: false, includePerks: true })
     case "STAFF":
