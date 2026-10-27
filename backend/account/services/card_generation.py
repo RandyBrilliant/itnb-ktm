@@ -74,9 +74,19 @@ def _draw_field(draw, x: int, label_y: int, label: str, value: str, label_font, 
     draw.text((x, bbox[3] + 6), value, fill=VALUE_COLOR, font=value_font)
 
 
+def _template_path_for(card_type: str) -> Optional[str]:
+    """Staff and lecturer use the student artwork with the spine title renamed."""
+    base = getattr(settings, "ID_CARD_FRONT_TEMPLATE_PATH", None)
+    if card_type in ("STAFF", "LECTURER") and base:
+        role_template = Path(base).with_name(f"card-bg-{card_type.lower()}.jpg")
+        if role_template.exists():
+            return str(role_template)
+    return base
+
+
 def generate_digital_card_image(user, card_type: str) -> Image.Image:
     """Generate a digital card front image from card-bg.jpg with user data overlays."""
-    template = _load_template(getattr(settings, "ID_CARD_FRONT_TEMPLATE_PATH", None))
+    template = _load_template(_template_path_for(card_type))
     canvas = template.copy() if template else Image.new("RGBA", CARD_SIZE, "#f4f4f4")
     if canvas.size != CARD_SIZE:
         canvas = _fit_cover(canvas, CARD_SIZE[0], CARD_SIZE[1])

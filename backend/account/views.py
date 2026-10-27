@@ -892,16 +892,15 @@ class DigitalCardViewSet(viewsets.ReadOnlyModelViewSet):
         card = DigitalCard.objects.filter(user=request.user).first()
         if card is None:
             card = self._create_card_for_user(request.user, request)
-        else:
-            try:
-                self._ensure_qr_code(card)
-            except Exception as exc:
-                logger.warning(
-                    "QR generation failed for user_id=%s card_id=%s: %s",
-                    request.user.id,
-                    card.id,
-                    exc,
-                )
+        try:
+            self._ensure_qr_code(card)
+        except Exception as exc:
+            logger.warning(
+                "QR generation failed for user_id=%s card_id=%s: %s",
+                request.user.id,
+                card.id,
+                exc,
+            )
 
         serializer = self.get_serializer(card)
         return Response(

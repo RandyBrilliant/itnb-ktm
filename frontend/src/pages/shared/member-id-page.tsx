@@ -36,6 +36,12 @@ const ROLE_COPY: Partial<Record<UserRole, { idLabel: string; roleLabel: string; 
   ALUMNI: { idLabel: "Student ID", roleLabel: "Alumni", credential: "Alumni Credential" },
 }
 
+/** Student artwork with the spine and back copy renamed for that role. */
+const ROLE_CARD_ART: Partial<Record<UserRole, { front: string; back: string }>> = {
+  STAFF: { front: "/img/card-bg-staff.jpg", back: "/img/card-bg-back-staff.jpg" },
+  LECTURER: { front: "/img/card-bg-lecturer.jpg", back: "/img/card-bg-back-lecturer.jpg" },
+}
+
 export function MemberIdPage({ role }: { role: UserRole }) {
   const roleCopy = ROLE_COPY[role]
   const [flipped, setFlipped] = useState(false)
@@ -51,12 +57,15 @@ export function MemberIdPage({ role }: { role: UserRole }) {
     queryFn: getMyCard,
   })
 
-  const frontBackgroundUrl =
-    resolveMediaUrl(env.VITE_ID_CARD_FRONT_TEMPLATE_URL) ||
-    resolvePublicAssetUrl(CARD_BACKGROUND_URL)
-  const backBackgroundUrl =
-    resolveMediaUrl(env.VITE_ID_CARD_BACK_TEMPLATE_URL) ||
-    resolvePublicAssetUrl(CARD_BACK_BACKGROUND_URL)
+  const roleArt = ROLE_CARD_ART[role]
+  const frontBackgroundUrl = roleArt
+    ? resolvePublicAssetUrl(roleArt.front)
+    : resolveMediaUrl(env.VITE_ID_CARD_FRONT_TEMPLATE_URL) ||
+      resolvePublicAssetUrl(CARD_BACKGROUND_URL)
+  const backBackgroundUrl = roleArt
+    ? resolvePublicAssetUrl(roleArt.back)
+    : resolveMediaUrl(env.VITE_ID_CARD_BACK_TEMPLATE_URL) ||
+      resolvePublicAssetUrl(CARD_BACK_BACKGROUND_URL)
 
   useEffect(() => {
     setFrontBackgroundFailed(false)
