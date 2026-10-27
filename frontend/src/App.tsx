@@ -68,6 +68,9 @@ const WebinarAttendPage = lazy(() =>
 const StudentEmailSetupPage = lazy(() =>
   import("@/pages/student-email-setup-page").then((m) => ({ default: m.StudentEmailSetupPage }))
 )
+const EmailVerificationPage = lazy(() =>
+  import("@/pages/email-verification-page").then((m) => ({ default: m.EmailVerificationPage }))
+)
 const StudentDashboard = lazy(() => import("@/pages/student/dashboard").then((m) => ({ default: m.StudentDashboard })))
 const StaffDashboardPage = lazy(() => import("@/pages/staff-dashboard-page").then((m) => ({ default: m.StaffDashboardPage })))
 const LecturerDashboardPage = lazy(() => import("@/pages/lecturer-dashboard-page").then((m) => ({ default: m.LecturerDashboardPage })))
@@ -224,6 +227,14 @@ function App() {
 
             {/* Staff Routes */}
             <Route
+              path="/staff/verify-email"
+              element={
+                <ProtectedRoute allowedRoles={["STAFF"]}>
+                  <EmailVerificationPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/staff/*"
               element={
                 <ProtectedRoute allowedRoles={["STAFF"]}>
@@ -276,6 +287,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["STAFF"]}>
                   <PerkDetailPage role="STAFF" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lecturer/verify-email"
+              element={
+                <ProtectedRoute allowedRoles={["LECTURER"]}>
+                  <EmailVerificationPage />
                 </ProtectedRoute>
               }
             />

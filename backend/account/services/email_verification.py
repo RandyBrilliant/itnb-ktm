@@ -31,6 +31,7 @@ def send_verification_code_email(
         message = (
             "Please verify your ITNB Hub email address.\n\n"
             f"Your verification code is: {code}\n\n"
+            "Sign in to ITNB Hub and enter this code on the email verification screen.\n"
             f"This code expires in {expiry} minutes.\n"
             "If you did not request this, you can ignore this email."
         )

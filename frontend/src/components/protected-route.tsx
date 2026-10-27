@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
 import type { UserRole } from "@/types/auth"
 import { getDashboardRouteForRole } from "@/types/auth"
-import { getEmailSetupRoute, requiresEmailSetup } from "@/lib/email-setup"
+import { getRequiredOnboardingRoute, isOnboardingRoute } from "@/lib/email-setup"
 import { logout as logoutApi } from "@/api/auth"
 
 interface ProtectedRouteProps {
@@ -55,15 +55,16 @@ export function ProtectedRoute({
     return <Navigate to={getDashboardRouteForRole(user.role)} replace />
   }
 
-  const emailSetupRoute = user ? getEmailSetupRoute(user.role) : null
-  const onEmailSetupRoute = emailSetupRoute ? location.pathname === emailSetupRoute : false
+  if (user) {
+    const onboardingRoute = getRequiredOnboardingRoute(user)
 
-  if (user && emailSetupRoute && requiresEmailSetup(user) && !onEmailSetupRoute) {
-    return <Navigate to={emailSetupRoute} replace />
-  }
+    if (onboardingRoute && location.pathname !== onboardingRoute) {
+      return <Navigate to={onboardingRoute} replace />
+    }
 
-  if (user && emailSetupRoute && onEmailSetupRoute && !requiresEmailSetup(user)) {
-    return <Navigate to={getDashboardRouteForRole(user.role)} replace />
+    if (!onboardingRoute && isOnboardingRoute(user.role, location.pathname)) {
+      return <Navigate to={getDashboardRouteForRole(user.role)} replace />
+    }
   }
 
   return children
