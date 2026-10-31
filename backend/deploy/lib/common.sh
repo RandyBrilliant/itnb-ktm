@@ -193,7 +193,17 @@ remove_legacy_proxy() {
 ensure_proxy() {
     ensure_frontend_releases_dir
     remove_legacy_proxy
+
+    local before after
+    before="$(compose ps -q "$PROXY_SERVICE" 2>/dev/null || true)"
     compose up -d --no-deps "$PROXY_SERVICE"
+    after="$(compose ps -q "$PROXY_SERVICE" 2>/dev/null || true)"
+
+    # A new or recreated container has already loaded the current Caddyfile, and its
+    # admin API may not be listening yet — only reload a container that kept running.
+    if [[ -z "$before" || "$before" != "$after" ]]; then
+        return 0
+    fi
 
     if [[ -n "${CHANGED_FILES:-}" ]] && echo "$CHANGED_FILES" | grep -qE '(^|/)caddy/'; then
         print_warning "Caddy config changed — reloading Caddy"
