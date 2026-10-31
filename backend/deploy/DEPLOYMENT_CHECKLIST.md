@@ -35,11 +35,9 @@ Print this checklist and have it available in the server room or operations cent
 - [ ] Firewall rules reviewed and configured
 
 ### SSL Certificate
-- [ ] Let's Encrypt account created (if using free SSL)
-- [ ] OR commercial SSL certificate obtained
-- [ ] Certificate valid for domain
-- [ ] Certificate valid for minimum 90 days
-- [ ] Certificate path documented: `/etc/letsencrypt/live/domain/`
+- [ ] `ACME_EMAIL` set in `.env` (Caddy issues/renews Let's Encrypt certificates automatically)
+- [ ] DNS for data.itnb.ac.id and portal.itnb.ac.id points at the VPS
+- [ ] Ports 80 and 443 (TCP) and 443 (UDP, HTTP/3) open
 
 ---
 
@@ -124,7 +122,7 @@ docker ps | grep itnb-hub
 - [ ] Backend container running
 - [ ] Database container running
 - [ ] Redis container running
-- [ ] Nginx container running
+- [ ] Caddy container running (healthy)
 
 ### Step 6: Verify Database
 ```bash
@@ -159,23 +157,15 @@ curl -I http://localhost:8000/api/
 - [ ] Database connectivity verified
 - [ ] Redis connectivity verified
 
-### Step 8: Configure SSL (Let's Encrypt)
+### Step 8: Verify HTTPS (automatic via Caddy)
 ```bash
-# If not already done by setup.sh:
-sudo certbot certonly --standalone -d your-domain.com
-
-# Verify certificate exists
-ls -la /etc/letsencrypt/live/your-domain.com/
+docker logs itnb-hub-caddy 2>&1 | grep -iE "certificate obtained|error"
 ```
-- [ ] SSL certificate obtained
-- [ ] Certificate path correct in .env
-- [ ] Certificate valid until date noted: ________________
-- [ ] Auto-renewal configured
+- [ ] Certificates obtained for data.itnb.ac.id and portal.itnb.ac.id
 
 ### Step 9: Start HTTPS Access
 ```bash
-# Restart Nginx with SSL config
-./deploy/monitor.sh restart nginx
+# Enable Django HTTPS settings (SECURE_SSL_REDIRECT, *_COOKIE_SECURE) in .env, then redeploy
 
 # Test HTTPS
 curl -I https://your-domain.com/

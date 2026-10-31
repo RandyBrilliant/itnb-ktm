@@ -135,7 +135,7 @@ chmod +x *.sh
 ./monitor.sh logs backend      # Django application
 ./monitor.sh logs db           # Database
 ./monitor.sh logs celery       # Background tasks
-./monitor.sh logs nginx        # Web server
+./monitor.sh logs caddy        # Edge proxy (HTTPS + SPA)
 # (Exit logs with Ctrl+C)
 
 # Run health checks

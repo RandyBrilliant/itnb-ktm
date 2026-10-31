@@ -2,7 +2,9 @@
 # Usage:
 #   First deploy:  ./deploy/deploy-fresh.sh
 #   CI deploy:     APP_IMAGE=ghcr.io/<owner>/itnb-hub-api:<sha> ./deploy/deploy-registry.sh
-# .env: SECRET_KEY, DEBUG=False, ALLOWED_HOSTS, SQL_*, DATABASE_URL, CELERY_BROKER_URL, APP_IMAGE (optional)
+# .env: SECRET_KEY, DEBUG=False, ALLOWED_HOSTS, SQL_*, DATABASE_URL, CELERY_BROKER_URL, APP_IMAGE (optional), ACME_EMAIL
+# Edge: Caddy terminates TLS (auto Let's Encrypt) for data.itnb.ac.id and serves the SPA (portal.itnb.ac.id)
+#       from ./frontend-releases/current, which the frontend workflow uploads.
 
 services:
   redis:
@@ -14,26 +16,30 @@ services:
     networks:
       - itnb-network
 
-  nginx:
-    image: nginx:alpine
-    container_name: itnb-hub-nginx
+  caddy:
+    image: caddy:2.11-alpine
+    container_name: itnb-hub-caddy
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-admin@itnb.ac.id}
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/itnb-hub.conf:/etc/nginx/conf.d/itnb-hub.conf:ro
-      - ./nginx/itnb-hub.ssl.conf:/etc/nginx/conf.d/itnb-hub.ssl.conf:ro
-      - ./nginx/certbot/www:/var/www/certbot
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - media_volume:/app/media:ro
-      - static_volume:/app/staticfiles:ro
-      - ./logs/nginx:/var/log/nginx
-    depends_on:
-      - api
+      - ./caddy:/etc/caddy:ro
+      - ./frontend-releases:/srv/frontend:ro
+      - static_volume:/srv/static:ro
+      - media_volume:/srv/media:ro
+      - caddy_data:/data
+      - caddy_config:/config
     restart: unless-stopped
     networks:
       - itnb-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/caddy-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   api:
     build:
@@ -158,3 +164,5 @@ volumes:
   media_volume:
   static_volume:
   redis_data:
+  caddy_data:
+  caddy_config:

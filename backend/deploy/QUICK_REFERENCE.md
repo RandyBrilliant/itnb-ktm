@@ -94,7 +94,6 @@ Is the system down?
 | Weekly | Docker cleanup | `./deploy/monitor.sh clean` |
 | Monthly | Update images | `docker-compose pull && ./deploy/redeploy.sh` |
 | Monthly | DB maintenance | `docker exec itnb-hub-db vacuumdb -U postgres itnb_hub` |
-| Quarterly | SSL renewal | `sudo certbot renew` |
 | Quarterly | Security scan | `docker run --rm aquasec/trivy image itnb-hub-backend:latest` |
 
 ---
@@ -106,7 +105,7 @@ Is the system down?
 # Find what's using port 80
 sudo lsof -i :80
 
-# Stop conflicting service or change nginx port in docker-compose.prod.yml
+# Stop the conflicting service (e.g. a host nginx/apache); Caddy needs 80 and 443
 ```
 
 ### Issue: "Database connection refused"
@@ -126,8 +125,8 @@ grep DATABASE_PASSWORD .env
 # Collect static files
 docker exec itnb-hub-backend python manage.py collectstatic --noinput
 
-# Verify Nginx sees them
-docker exec itnb-hub-nginx ls -la /usr/share/nginx/html/static/ | head -20
+# Verify Caddy sees them
+docker exec itnb-hub-caddy ls -la /srv/static/ | head -20
 ```
 
 ### Issue: "API returns 500 errors"
@@ -246,11 +245,12 @@ Project Root
 # SSH into backend container and Django shell
 docker exec -it itnb-hub-backend python manage.py shell
 
-# Count API requests in nginx logs (last hour)
-docker exec itnb-hub-nginx grep "$(date -d '1 hour ago' +'%d/%b/%Y:%H')" /var/log/nginx/access.log | wc -l
+# Count requests in Caddy access logs (last hour)
+docker logs --since 1h itnb-hub-caddy 2>&1 | grep -c '"logger":"http.log.access'
 
-# Find slowest endpoints
-docker exec itnb-hub-nginx grep -oP '"\s+\d+\s+\d+' /var/log/nginx/access.log | tail -1000 | sort -k3 -rn | head -20
+# Find slowest requests (Caddy JSON access log: duration in seconds)
+docker logs --since 1h itnb-hub-caddy 2>&1 | grep '"http.log.access' \
+  | jq -r '[.duration, .request.method, .request.uri] | @tsv' | sort -rn | head -20
 
 # Monitor Celery tasks in real-time
 docker exec -it itnb-hub-celery celery inspect active

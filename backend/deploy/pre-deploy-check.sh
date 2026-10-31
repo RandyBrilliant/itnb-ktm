@@ -222,11 +222,11 @@ for doc in DEPLOYMENT_GUIDE.md QUICK_REFERENCE.md; do
     fi
 done
 
-# Check nginx config
-if [[ -f "backend/nginx/itnb-hub.conf" ]]; then
-    check_pass "Nginx configuration found"
+# Check Caddy config
+if [[ -f "backend/caddy/Caddyfile" ]]; then
+    check_pass "Caddy configuration found"
 else
-    check_fail "Nginx configuration not found"
+    check_fail "Caddy configuration not found"
 fi
 
 header "Git & Version Control"
@@ -297,20 +297,11 @@ fi
 
 header "SSL/HTTPS Configuration"
 
-# SSL certificate path
-SSL_CERT="/etc/letsencrypt/live/*/fullchain.pem"
-if ls $SSL_CERT > /dev/null 2>&1; then
-    CERT_COUNT=$(ls $SSL_CERT | wc -l)
-    check_pass "SSL certificates found: $CERT_COUNT"
+# Caddy manages certificates in the caddy_data volume; it only needs ports 80/443 free.
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx 'itnb-hub-caddy'; then
+    check_pass "Caddy is running (automatic HTTPS)"
 else
-    check_warn "No SSL certificates found (Let's Encrypt setup may be needed)"
-fi
-
-# Certbot
-if command -v certbot &> /dev/null; then
-    check_pass "Certbot installed: $(certbot --version)"
-else
-    check_warn "Certbot not installed (needed for Let's Encrypt SSL)"
+    check_warn "Caddy is not running (started by the next deploy)"
 fi
 
 header "Summary"

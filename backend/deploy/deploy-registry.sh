@@ -73,9 +73,7 @@ save_last_good_app_image "$TARGET_APP_IMAGE"
 print_header "Restarting workers"
 restart_workers
 
-if [[ -n "${CHANGED_FILES:-}" ]] && echo "$CHANGED_FILES" | grep -qE '(^|/)nginx/'; then
-    print_header "Reloading nginx (config changed)"
-    compose up -d --no-deps nginx
-fi
+print_header "Edge proxy (Caddy)"
+ensure_proxy
 
 print_success "Deployed ${TARGET_APP_IMAGE}"

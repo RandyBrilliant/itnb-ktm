@@ -6,7 +6,7 @@
 # DESCRIPTION:
 #   Sets up ITNB Hub on a production server (Ubuntu 20.04+)
 #   - Installs Docker & Docker Compose
-#   - Configures SSL with Let's Encrypt
+#   - HTTPS is handled by Caddy (automatic Let's Encrypt)
 #   - Sets up environment variables
 #   - Initializes database
 #   - Starts all services
@@ -112,15 +112,12 @@ sed -i "s|CSRF_TRUSTED_ORIGINS=.*|CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://w
 log_success "Enabled production security settings"
 
 # ===========================================================================
-# Create nginx config directory
+# Create frontend release directory (Caddy bind mount)
 # ===========================================================================
 
-log_info "Setting up nginx configuration..."
+mkdir -p "$PROJECT_DIR/frontend-releases"
 
-mkdir -p "$PROJECT_DIR/nginx/ssl"
-mkdir -p "$PROJECT_DIR/logs/nginx"
-
-log_success "Created nginx directories"
+log_success "Created frontend-releases directory"
 
 # ===========================================================================
 # Build and start services
@@ -142,14 +139,11 @@ sleep 5
 log_success "Services started"
 
 # ===========================================================================
-# SSL Certificate Setup (Optional)
+# TLS
 # ===========================================================================
 
-log_info "SSL Certificate Setup"
-log_warning "You can set up SSL manually later using:"
-log_warning "  sudo certbot certonly --standalone -d $DOMAIN -d www.$DOMAIN"
-log_warning "Then copy certificates to: $PROJECT_DIR/nginx/ssl/"
-log_warning "And uncomment HTTPS section in: $PROJECT_DIR/nginx/itnb-hub.conf"
+log_info "HTTPS is automatic: Caddy issues certificates once DNS points at this server"
+log_info "  docker compose -f docker-compose.prod.yml logs -f caddy"
 
 # ===========================================================================
 # Verify services
@@ -183,17 +177,13 @@ echo "Project: $PROJECT_DIR"
 echo "Domain: $DOMAIN"
 echo ""
 echo "Next steps:"
-echo "1. Set up SSL certificate:"
-echo "   sudo certbot certonly --standalone -d $DOMAIN -d www.$DOMAIN"
+echo "1. HTTPS: point DNS at this server; Caddy issues certificates automatically"
+echo "   docker-compose -f docker-compose.prod.yml logs -f caddy"
 echo ""
-echo "2. Configure SSL in nginx:"
-echo "   Edit: $PROJECT_DIR/nginx/itnb-hub.conf"
-echo "   Uncomment HTTPS sections and restart nginx"
-echo ""
-echo "3. View logs:"
+echo "2. View logs:"
 echo "   docker-compose -f docker-compose.prod.yml logs -f"
 echo ""
-echo "4. Access your API:"
-echo "   http://$DOMAIN/api/"
+echo "3. Access your API:"
+echo "   https://$DOMAIN/api/"
 echo ""
 log_success "========================================================"

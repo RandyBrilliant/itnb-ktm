@@ -23,7 +23,9 @@ if [[ "${AUTO_DEPLOY:-}" != "true" ]]; then
 fi
 
 print_header "Building and starting services"
-compose up -d --build
+ensure_frontend_releases_dir
+remove_legacy_proxy
+compose up -d --build --remove-orphans
 
 print_header "Waiting for API health"
 if wait_for_healthy "$APP_SERVICE" 60 && probe_app_http_health "$(resolve_app_port)" 18; then

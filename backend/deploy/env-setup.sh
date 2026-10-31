@@ -176,16 +176,9 @@ REDIS_PORT=${REDIS_PORT:-6379}
 read -p "Use HTTPS (True/False) [True]: " USE_HTTPS
 USE_HTTPS=${USE_HTTPS:-True}
 
-if [[ "$USE_HTTPS" == "True" ]]; then
-    read -p "SSL certificate path [/etc/letsencrypt/live/\${domain}/fullchain.pem]: " SSL_CERT
-    SSL_CERT=${SSL_CERT:-/etc/letsencrypt/live/${DOMAINS%%,*}/fullchain.pem}
-    
-    read -p "SSL key path [/etc/letsencrypt/live/\${domain}/privkey.pem]: " SSL_KEY
-    SSL_KEY=${SSL_KEY:-/etc/letsencrypt/live/${DOMAINS%%,*}/privkey.pem}
-else
-    SSL_CERT=""
-    SSL_KEY=""
-fi
+# Caddy issues/renews certificates automatically; it only needs a contact address.
+read -p "ACME contact email [admin@itnb.ac.id]: " ACME_EMAIL
+ACME_EMAIL=${ACME_EMAIL:-admin@itnb.ac.id}
 
 echo -e "\n${YELLOW}=== Generate .env File ===${NC}\n"
 
@@ -218,8 +211,7 @@ REDIS_PORT=$REDIS_PORT
 
 # Security
 USE_HTTPS=$USE_HTTPS
-SSL_CERTIFICATE_PATH=$SSL_CERT
-SSL_KEY_PATH=$SSL_KEY
+ACME_EMAIL=$ACME_EMAIL
 EOF
 
 # Set restricted permissions

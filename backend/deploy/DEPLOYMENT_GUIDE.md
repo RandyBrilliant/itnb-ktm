@@ -200,7 +200,7 @@ chmod +x deploy/monitor.sh
 # itnb-hub-db             Up 2 days                   0.0.0.0:5432->5432/tcp
 # itnb-hub-redis          Up 2 days                   0.0.0.0:6379->6379/tcp
 # itnb-hub-celery         Up 2 days                   
-# itnb-hub-nginx          Up 2 days                   0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
+# itnb-hub-caddy          Up 2 days (healthy)         0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
 ```
 
 ### View Logs
@@ -215,8 +215,8 @@ chmod +x deploy/monitor.sh
 # Celery worker logs
 ./deploy/monitor.sh logs celery
 
-# Nginx logs (exit with Ctrl+C)
-./deploy/monitor.sh logs nginx
+# Caddy logs (exit with Ctrl+C)
+./deploy/monitor.sh logs caddy
 
 # Or direct Docker access
 docker logs -f itnb-hub-backend
@@ -277,7 +277,7 @@ docker-compose -f docker-compose.prod.yml pull
 ./deploy/backup.sh restore <latest-backup-file>
 
 # 4. Review security logs
-grep "permission denied\|invalid request" /var/log/nginx/error.log
+docker logs itnb-hub-caddy 2>&1 | grep -i "error"
 ```
 
 #### Quarterly
@@ -289,8 +289,7 @@ sudo apt update && sudo apt upgrade -y
 # 2. Docker update
 sudo apt install -y docker-ce docker-ce-cli
 
-# 3. SSL certificate renewal (Let's Encrypt auto-renews at day 30)
-sudo certbot renew --quiet
+# 3. TLS certificates: renewed automatically by Caddy (nothing to do)
 
 # 4. Database optimization
 docker exec itnb-hub-db vacuumdb -U postgres itnb_hub
@@ -345,13 +344,13 @@ docker exec itnb-hub-db psql -U postgres -c "SELECT count(*) FROM pg_stat_activi
 # Collect static files
 docker exec itnb-hub-backend python manage.py collectstatic --noinput
 
-# Check if Nginx serving them correctly
-docker exec itnb-hub-nginx ls -la /usr/share/nginx/html/static/
+# Check Caddy sees them
+docker exec itnb-hub-caddy ls -la /srv/static/ | head -20
 ```
 
 **Solution**:
 - Run `collectstatic` manually
-- Verify Nginx volume mounts in `docker-compose.prod.yml`
+- Verify the Caddy volume mounts in `docker-compose.prod.yml`
 - Check file permissions: `sudo chmod -R 755 /path/to/static`
 
 ### 4. API Returns 500 Errors
@@ -420,20 +419,17 @@ docker exec itnb-hub-db psql -U postgres -c "SELECT * FROM pg_stat_statements OR
 **Symptom**: `SSL_ERROR_RX_RECORD_TOO_LONG` or browser shows certificate warning
 
 ```bash
-# Check current certificate
-sudo openssl x509 -in /etc/letsencrypt/live/your-domain/fullchain.pem -text -noout
+# Test the served certificate
+echo | openssl s_client -servername data.itnb.ac.id -connect data.itnb.ac.id:443 2>/dev/null | openssl x509 -noout -dates -issuer
 
-# Test SSL configuration
-echo | openssl s_client -servername your-domain -connect your-domain:443
-
-# Check Nginx SSL configuration
-docker exec itnb-hub-nginx cat /etc/nginx/conf.d/itnb-hub.conf | grep -A 5 "ssl_certificate"
+# Caddy's ACME log (issuance/renewal errors)
+docker logs itnb-hub-caddy 2>&1 | grep -iE "acme|certificate|tls"
 ```
 
 **Solution**:
-- Renew certificate: `sudo certbot renew`
-- Verify Nginx is using correct certificate paths
-- Restart Nginx: `./deploy/monitor.sh restart nginx`
+- DNS for the domain must point at this VPS and ports 80/443 must be reachable — Caddy retries automatically
+- Validate config: `docker exec itnb-hub-caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile`
+- Reload config: `docker exec itnb-hub-caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`
 
 ---
 
@@ -448,10 +444,10 @@ docker exec itnb-hub-nginx cat /etc/nginx/conf.d/itnb-hub.conf | grep -A 5 "ssl_
                            │ HTTP/HTTPS
                            ▼
         ┌──────────────────────────────────────┐
-        │      Nginx (Reverse Proxy)           │
-        │  - SSL termination                   │
-        │  - Static file serving               │
-        │  - Load balancing                    │
+        │      Caddy (Edge Proxy)              │
+        │  - Automatic HTTPS (Let's Encrypt)   │
+        │  - SPA (portal.itnb.ac.id)           │
+        │  - Static/media file serving         │
         └──────────────┬───────────────────────┘
                        │
         ┌──────────────┼───────────────────────┐
@@ -477,7 +473,7 @@ docker exec itnb-hub-nginx cat /etc/nginx/conf.d/itnb-hub.conf | grep -A 5 "ssl_
 
 ### Data Flow
 
-1. **HTTP Request** → Nginx (reverse proxy) → Django Backend
+1. **HTTP Request** → Caddy (edge proxy) → Django Backend; the SPA is served by Caddy directly
 2. **Async Tasks** → Celery Worker → Process → Redis
 3. **Real-time Updates** → WebSocket (Channels) → Connected Clients
 4. **File Operations** → Media Volume → Stored on Host
@@ -490,7 +486,7 @@ docker exec itnb-hub-nginx cat /etc/nginx/conf.d/itnb-hub.conf | grep -A 5 "ssl_
 | **backend** | custom:prod | Django REST API | 8000 | 512MB |
 | **daphne** | custom:prod | ASGI server (WebSocket) | 8001 | 256MB |
 | **celery** | custom:prod | Async tasks | N/A | 512MB |
-| **nginx** | nginx:latest | Web server/proxy | 80,443 | 256MB |
+| **caddy** | caddy:2.11-alpine | Edge proxy, TLS, SPA | 80,443 | 64MB |
 | **db** | postgres:15 | Primary database | 5432 | 1GB |
 | **redis** | redis:7 | Cache/broker | 6379 | 256MB |
 
@@ -503,7 +499,7 @@ docker exec itnb-hub-nginx cat /etc/nginx/conf.d/itnb-hub.conf | grep -A 5 "ssl_
 - [ ] Generate strong `SECRET_KEY` in `.env`
 - [ ] Set `DEBUG=False` in `.env`
 - [ ] Configure `ALLOWED_HOSTS` in `.env`
-- [ ] Enable HTTPS in Nginx config
+- [ ] HTTPS issued by Caddy for data.itnb.ac.id and portal.itnb.ac.id
 - [ ] Set strong database password
 - [ ] Create Django superuser with complex password
 - [ ] Review and restrict CORS origins
@@ -521,7 +517,7 @@ docker exec itnb-hub-nginx cat /etc/nginx/conf.d/itnb-hub.conf | grep -A 5 "ssl_
   sudo ufw allow 443/tcp
   sudo ufw enable
   ```
-- [ ] Set up log rotation for Docker and Nginx
+- [ ] Set up log rotation for Docker
 - [ ] Configure monitoring/alerting (e.g., Sentry for errors)
 - [ ] Enable automatic backups with offsite storage
 - [ ] Set up SSH key authentication for deployments
@@ -550,7 +546,7 @@ Incident Report: incidents@your-domain.com
 ### Documentation Links
 - [Django Deployment Guide](https://docs.djangoproject.com/en/5.2/howto/deployment/)
 - [Docker Production Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [Nginx Configuration Guide](https://nginx.org/en/docs/)
+- [Caddyfile Documentation](https://caddyserver.com/docs/caddyfile)
 - [PostgreSQL Administration](https://www.postgresql.org/docs/15/admin.html)
 - [Celery Production Guide](https://docs.celeryproject.io/en/stable/userguide/deploying.html)
 

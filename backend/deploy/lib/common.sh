@@ -13,6 +13,9 @@ APP_CONTAINER="${APP_CONTAINER:-itnb-hub-backend}"
 WORKER_SERVICES="${WORKER_SERVICES:-celery celery-beat}"
 DEFAULT_APP_IMAGE="${DEFAULT_APP_IMAGE:-itnb-hub-api:latest}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+PROXY_SERVICE="${PROXY_SERVICE:-caddy}"
+LEGACY_PROXY_CONTAINER="${LEGACY_PROXY_CONTAINER:-itnb-hub-nginx}"
+FRONTEND_RELEASES_DIR="${FRONTEND_RELEASES_DIR:-frontend-releases}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -171,6 +174,36 @@ restart_workers() {
     for worker in $WORKER_SERVICES; do
         compose up -d --no-deps "$worker"
     done
+}
+
+ensure_frontend_releases_dir() {
+    # Must exist before Caddy starts, otherwise Docker creates the bind-mount source as root
+    # and the CI rsync (non-root deploy user) cannot write releases into it.
+    mkdir -p "$PROJECT_ROOT/$FRONTEND_RELEASES_DIR"
+}
+
+remove_legacy_proxy() {
+    if docker inspect "$LEGACY_PROXY_CONTAINER" >/dev/null 2>&1; then
+        print_warning "Removing legacy $LEGACY_PROXY_CONTAINER container (replaced by Caddy)"
+        docker rm -f "$LEGACY_PROXY_CONTAINER" >/dev/null
+    fi
+}
+
+# Start/refresh the Caddy edge proxy. Idempotent: `up` is a no-op when the container is current.
+ensure_proxy() {
+    ensure_frontend_releases_dir
+    remove_legacy_proxy
+    compose up -d --no-deps "$PROXY_SERVICE"
+
+    if [[ -n "${CHANGED_FILES:-}" ]] && echo "$CHANGED_FILES" | grep -qE '(^|/)caddy/'; then
+        print_warning "Caddy config changed — reloading Caddy"
+        reload_proxy
+    fi
+}
+
+# Graceful, atomic reload: an invalid Caddyfile is rejected and the running config stays active.
+reload_proxy() {
+    compose exec -T "$PROXY_SERVICE" caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 }
 
 rollback_app_deployment() {

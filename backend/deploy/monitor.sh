@@ -93,7 +93,7 @@ elif [[ "$COMMAND" == "health" ]]; then
     if curl -sf http://localhost:8000/api/ > /dev/null 2>&1; then
         log_success "API: OK"
     else
-        log_warning "API: Unreachable (may need nginx/SSL setup)"
+        log_warning "API: Unreachable (check: docker compose logs caddy)"
     fi
     
     echo ""

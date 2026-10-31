@@ -50,9 +50,7 @@ staticfiles/
 static/
 
 # Production deployment files
-nginx/ssl/
-nginx/certbot/www/*
-!nginx/certbot/www/.gitkeep
+frontend-releases/
 .deploy-last-good-image
 .backups/
 
