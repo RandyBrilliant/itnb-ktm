@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from account.models import CustomUser, UserRole
+from backend.uploads import RandomFilename
 
 
 class CertificateStatus(models.TextChoices):
@@ -87,7 +88,7 @@ class CertificateProgram(models.Model):
     description = models.TextField(_("description"), blank=True)
     template_image = models.ImageField(
         _("template image"),
-        upload_to="certificate_templates/%Y/%m/",
+        upload_to=RandomFilename("certificate_templates/%Y/%m/"),
         null=True,
         blank=True,
         help_text=_("Optional A4 artwork. When omitted, a generic PDF is generated."),
@@ -104,7 +105,7 @@ class CertificateProgram(models.Model):
     )
     recipients_file = models.FileField(
         _("recipients spreadsheet"),
-        upload_to="certificate_batches/%Y/%m/",
+        upload_to=RandomFilename("certificate_batches/%Y/%m/"),
         null=True,
         blank=True,
         help_text=_("Excel file with Name and ID columns. Not required for webinar auto-issue."),
@@ -154,7 +155,7 @@ class Certificate(models.Model):
     )
     issued_date = models.DateField(_("issued date"))
     valid_until = models.DateField(_("valid until"), null=True, blank=True)
-    pdf_file = models.FileField(_("PDF file"), upload_to="certificates/%Y/%m/", null=True, blank=True)
+    pdf_file = models.FileField(_("PDF file"), upload_to=RandomFilename("certificates/%Y/%m/"), null=True, blank=True)
     legacy_code = models.CharField(
         _("legacy verification code"),
         max_length=64,

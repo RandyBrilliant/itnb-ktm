@@ -30,8 +30,14 @@ if [ "${DEBUG:-0}" = "0" ]; then
     fi
 fi
 
+# Same truthiness as settings.py (DEBUG=True/1/yes); production uses DEBUG=False.
+case "$(printf '%s' "${DEBUG:-False}" | tr '[:upper:]' '[:lower:]')" in
+    true|1|yes) IS_DEBUG=1 ;;
+    *) IS_DEBUG=0 ;;
+esac
+
 # Run Django commands as appuser (so DB/files are owned correctly)
-if [ "${DEBUG:-0}" != "0" ]; then
+if [ "$IS_DEBUG" = "1" ]; then
     # Dev only: create migrations when models change locally
     gosu ${APP_UID}:${APP_GID} python manage.py makemigrations --noinput
 fi
@@ -40,8 +46,9 @@ fi
 gosu ${APP_UID}:${APP_GID} python manage.py migrate --noinput
 
 # Production: collect static files (for Caddy to serve)
-if [ "${DEBUG:-0}" = "0" ]; then
-    gosu ${APP_UID}:${APP_GID} python manage.py collectstatic --noinput --clear 2>/dev/null || true
+if [ "$IS_DEBUG" = "0" ]; then
+    gosu ${APP_UID}:${APP_GID} python manage.py collectstatic --noinput --clear \
+        || echo "WARNING: collectstatic failed — admin/API static files will 404"
 fi
 
 # Run the main command (gunicorn/daphne) as appuser

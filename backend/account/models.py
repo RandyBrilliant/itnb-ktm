@@ -12,6 +12,8 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from backend.uploads import RandomFilename
+
 from .managers import CustomUserManager
 
 
@@ -64,7 +66,7 @@ class CustomUser(AbstractUser):
     )
     photo = models.ImageField(
         _("profile photo"),
-        upload_to="profile_photos/%Y/%m/",
+        upload_to=RandomFilename("profile_photos/%Y/%m/"),
         null=True,
         blank=True,
         help_text=_("User profile picture."),
@@ -304,12 +306,12 @@ class DigitalCard(models.Model):
     )
     qr_code = models.ImageField(
         _("QR code"),
-        upload_to="qr_codes/%Y/%m/",
+        upload_to=RandomFilename("qr_codes/%Y/%m/"),
         help_text=_("QR code image for card verification."),
     )
     card_image = models.ImageField(
         _("card image"),
-        upload_to="cards/%Y/%m/",
+        upload_to=RandomFilename("cards/%Y/%m/"),
         null=True,
         blank=True,
         help_text=_("Generated digital card image."),
