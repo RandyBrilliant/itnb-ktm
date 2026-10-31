@@ -4,12 +4,17 @@ Rename existing private media files to random names (see backend/uploads.py).
 New uploads already get random names; this migrates files stored before that,
 whose names are guessable (e.g. profile_photos/2026/07/<institutional id>.webp).
 
+--delete-orphans also removes files in those folders that no record references
+(replaced photos, old QR codes, superseded spreadsheets); they keep guessable names.
+Card template artwork (cards/templates/) is never touched.
+
 Dry run by default:
-    python manage.py randomize_media_filenames
-    python manage.py randomize_media_filenames --apply
+    python manage.py randomize_media_filenames [--delete-orphans]
+    python manage.py randomize_media_filenames [--delete-orphans] --apply
 """
 import posixpath
 
+from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 
 from account.models import CustomUser, DigitalCard
@@ -25,14 +30,38 @@ FIELDS = [
     (Certificate, "pdf_file"),
 ]
 
+# Top-level media folders owned by FIELDS; anything unreferenced in them is an orphan.
+PRIVATE_DIRS = [
+    "profile_photos",
+    "qr_codes",
+    "cards",
+    "certificate_templates",
+    "certificate_batches",
+    "certificates",
+]
+KEEP_PREFIXES = ("cards/templates/",)
+
+
+def _walk(storage, directory):
+    dirs, files = storage.listdir(directory)
+    for name in files:
+        yield posixpath.join(directory, name)
+    for sub in dirs:
+        yield from _walk(storage, posixpath.join(directory, sub))
+
 
 class Command(BaseCommand):
     help = "Rename private media files with guessable names to random names."
 
     def add_arguments(self, parser):
         parser.add_argument("--apply", action="store_true", help="Rename files (default: dry run).")
+        parser.add_argument(
+            "--delete-orphans",
+            action="store_true",
+            help="Also delete unreferenced files in the private media folders.",
+        )
 
-    def handle(self, *args, apply=False, **options):
+    def handle(self, *args, apply=False, delete_orphans=False, **options):
         totals = {"renamed": 0, "skipped": 0, "missing": 0, "failed": 0}
 
         for model, field_name in FIELDS:
@@ -76,5 +105,30 @@ class Command(BaseCommand):
             f"{verb} {totals['renamed']} file(s); already random: {totals['skipped']}; "
             f"missing: {totals['missing']}; failed: {totals['failed']}"
         )
-        if not apply and totals["renamed"]:
-            self.stdout.write("Re-run with --apply to rename.")
+        orphans = self._find_orphans() if delete_orphans else []
+        if orphans:
+            for name in orphans:
+                if apply:
+                    default_storage.delete(name)
+                else:
+                    self.stdout.write(f"orphan: {name}")
+            verb = "Deleted" if apply else "Would delete"
+            self.stdout.write(f"{verb} {len(orphans)} unreferenced file(s)")
+
+        if not apply and (totals["renamed"] or orphans):
+            self.stdout.write("Re-run with --apply to make these changes.")
+
+    def _find_orphans(self):
+        # In a dry run renames have not happened, so current names are the references either way.
+        referenced = set()
+        for model, field_name in FIELDS:
+            referenced.update(n for n in model.objects.values_list(field_name, flat=True) if n)
+
+        orphans = []
+        for directory in PRIVATE_DIRS:
+            if not default_storage.exists(directory):
+                continue
+            for name in _walk(default_storage, directory):
+                if name not in referenced and not name.startswith(KEEP_PREFIXES):
+                    orphans.append(name)
+        return sorted(orphans)

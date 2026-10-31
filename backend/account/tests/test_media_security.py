@@ -77,3 +77,19 @@ class RandomizeMediaFilenamesCommandTests(TestCase):
         out = StringIO()
         call_command("randomize_media_filenames", "--apply", stdout=out)
         self.assertIn("Renamed 0 file(s); already random: 1", out.getvalue())
+
+    def test_delete_orphans_keeps_referenced_files_and_card_templates(self):
+        orphan = default_storage.save("profile_photos/2026/07/987654321.webp", ContentFile(b"old"))
+        template = default_storage.save("cards/templates/back.png", ContentFile(b"art"))
+
+        out = StringIO()
+        call_command("randomize_media_filenames", "--delete-orphans", stdout=out)
+        self.assertIn(f"orphan: {orphan}", out.getvalue())
+        self.assertTrue(default_storage.exists(orphan))
+
+        call_command("randomize_media_filenames", "--delete-orphans", "--apply", stdout=StringIO())
+
+        self.user.refresh_from_db()
+        self.assertFalse(default_storage.exists(orphan))
+        self.assertTrue(default_storage.exists(template))
+        self.assertTrue(default_storage.exists(self.user.photo.name))
