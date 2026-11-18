@@ -25,6 +25,7 @@ psycopg2-binary==2.9.10
 
 # Async Tasks
 celery==5.3.4
+kombu==5.5.4  # kombu>=5.7 requires redis-py>=6.1; keep pinned with redis below
 redis==5.0.1
 
 # WebSocket Support
