@@ -81,7 +81,14 @@ class OidcProviderTests(TestCase):
         self.client.force_login(self.user)
         res = self.client.get("/accounts/login/", {"next": "/o/userinfo/"})
         self.assertEqual(res.status_code, 200)
-        self.assertContains(res, "Sign in with ITNB Portal")
+        self.assertContains(res, 'id="login-form"')
+        self.assertContains(res, "Sign in to continue")
+
+    def test_login_page_names_the_client_app(self):
+        res = self._authorize()
+        res = self.client.get(res["Location"])
+        self.assertContains(res, "Sign in to continue to <b>ITNB Library</b>", html=False)
+        self.assertContains(res, "/forgot-password")
 
     def test_full_code_flow_returns_claims(self):
         self.client.force_login(self.user)

@@ -1,39 +1,179 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Sign in · ITNB Portal</title>
+  <meta name="theme-color" content="#af0f24">
+  <title>Sign in · IT&amp;B Portal</title>
+  <link rel="icon" href="{% static 'account/img/logo-single.png' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&family=Sora:wght@600..800&display=swap">
   <style>
-    :root { color-scheme: light dark; --bg:#f5f6f8; --card:#fff; --fg:#111827; --muted:#6b7280; --line:#d1d5db; --accent:#1d4ed8; --err:#b91c1c; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#0b0f17; --card:#111827; --fg:#f3f4f6; --muted:#9ca3af; --line:#374151; --accent:#60a5fa; --err:#f87171; } }
+    /* Mirrors the portal login (frontend/src/pages/login-page.tsx). */
+    :root {
+      --brand: #af0f24; --brand-2: #d32f39;
+      --ink: #1a1c1c; --muted: #5f5e5e; --line: #e4beba; --hint: #8f6f6c; --page: #f9f9f9;
+      --font-body: "Plus Jakarta Sans", "Inter", "Segoe UI", Roboto, sans-serif;
+      --font-heading: "Sora", "Manrope", "Plus Jakarta Sans", sans-serif;
+    }
     * { box-sizing: border-box; }
-    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:16px; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-    main { width:100%; max-width:380px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:28px; }
-    h1 { margin:0 0 4px; font-size:1.25rem; }
-    p.sub { margin:0 0 20px; color:var(--muted); font-size:.9rem; }
-    label { display:block; font-size:.875rem; font-weight:600; margin:14px 0 6px; }
-    input[type=text], input[type=password] { width:100%; padding:10px 12px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
-    input:focus { outline:2px solid var(--accent); outline-offset:1px; }
-    button { width:100%; margin-top:22px; padding:11px; font:inherit; font-weight:600; color:#fff; background:var(--accent); border:0; border-radius:8px; cursor:pointer; }
-    .err { color:var(--err); font-size:.875rem; margin:0 0 8px; }
+    html, body { margin: 0; }
+    body { min-height: 100vh; background: var(--page); color: var(--ink); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+
+    .bg { position: fixed; inset: 0; pointer-events: none; }
+    .bg img { width: 100%; height: 100%; object-fit: cover; opacity: .2; filter: grayscale(1); }
+    .bg::after { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to bottom right, rgb(249 249 249 / .95), rgb(249 249 249 / .88), rgb(175 15 36 / .10)); }
+
+    .page { position: relative; margin: 0 auto; display: flex; min-height: 100vh; width: 100%; max-width: 1200px;
+      align-items: center; justify-content: center; padding: 32px 16px;
+      animation: enter .24s ease-out both; }
+    @keyframes enter { from { opacity: 0; transform: translateY(8px); } }
+    @media (prefers-reduced-motion: reduce) { .page { animation: none; } }
+    @media (min-width: 640px) { .page { padding: 32px 24px; } }
+    @media (min-width: 1024px) { .page { justify-content: space-between; padding: 32px 48px; } }
+
+    /* Brand panel (desktop only) */
+    .brand { display: none; }
+    @media (min-width: 1024px) { .brand { display: flex; flex-direction: column; justify-content: center; max-width: 576px; padding-right: 56px; } }
+    .brand .crest { width: 96px; height: 96px; object-fit: contain; margin-bottom: 24px; }
+    .brand h1 { margin: 0; font-family: var(--font-heading); font-size: 48px; font-weight: 800; line-height: 1.25; letter-spacing: -.025em; }
+    .brand h1 span { color: var(--brand); }
+    .brand p { margin: 32px 0 0; max-width: 512px; font-size: 18px; line-height: 1.625; color: var(--muted); }
+    .est { margin-top: 48px; border-left: 2px solid var(--brand); padding-left: 16px; }
+    .est small { display: block; font-size: 12px; font-weight: 700; letter-spacing: .2em; color: var(--brand); }
+    .est strong { font-family: var(--font-heading); font-size: 36px; font-weight: 800; }
+
+    /* Card */
+    .card { position: relative; width: 100%; max-width: 448px; padding: 24px;
+      background: rgb(255 255 255 / .8); border: 1px solid rgb(255 255 255 / .4);
+      -webkit-backdrop-filter: blur(40px); backdrop-filter: blur(40px); }
+    .card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: var(--brand); }
+    @media (min-width: 640px) { .card { padding: 40px; } }
+
+    .head { display: flex; flex-direction: column; align-items: center; text-align: center; padding-left: 8px; margin-bottom: 32px; }
+    @media (min-width: 640px) { .head { margin-bottom: 40px; } }
+    .head img { width: 100%; max-width: 220px; height: auto; }
+    .eyebrow { margin: 16px 0 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: var(--brand); }
+    .sub { margin: 8px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .12em; color: var(--muted); }
+    .sub b { color: var(--ink); font-weight: 700; }
+    @media (min-width: 640px) { .sub { font-size: 14px; } }
+
+    form { padding-left: 8px; display: grid; gap: 24px; }
+    @media (min-width: 640px) { form { gap: 32px; } }
+    .fields { display: grid; gap: 20px; }
+    .error { border: 1px solid #fca5a5; background: #fef2f2; color: #b91c1c; border-radius: 2px; padding: 8px 12px; font-size: 14px; }
+    label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--brand); }
+    @media (min-width: 640px) { label { font-size: 14px; } }
+    .field { position: relative; }
+    .field > svg, .toggle { position: absolute; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .field > svg { left: 0; margin-top: -4px; }
+    .field input { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; border-radius: 0;
+      padding: 0 0 8px 32px; font: 400 16px/1.5 var(--font-body); color: var(--ink); outline: none; transition: border-color .15s; }
+    .field input::placeholder { color: var(--hint); }
+    .field input:focus { border-color: var(--brand); }
+    .field input[type=password], .field input.pw { padding-right: 32px; }
+    @media (min-width: 640px) { .field input { font-size: 18px; } }
+    .toggle { right: 0; margin-top: -4px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; transition: color .15s; }
+    .toggle:hover, .toggle:focus-visible { color: var(--brand); }
+    .toggle .off, .toggle[aria-pressed=true] .on { display: none; }
+    .toggle[aria-pressed=true] .off { display: block; }
+
+    .row { display: flex; justify-content: flex-end; }
+    .forgot { font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none; transition: color .15s; }
+    .forgot:hover { color: var(--brand); }
+
+    .submit { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; border: 0; cursor: pointer;
+      padding: 12px 20px; color: #fff; font: 700 18px/1.5 var(--font-heading);
+      background: linear-gradient(to bottom right, var(--brand), var(--brand-2)); transition: filter .15s, opacity .15s; }
+    .submit:hover { filter: brightness(1.05); }
+    .submit:disabled { opacity: .6; cursor: not-allowed; }
+    :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Sign in with ITNB Portal</h1>
-    <p class="sub">Use your portal email or NIM and password.</p>
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% for error in form.non_field_errors %}<p class="err">{{ error }}</p>{% endfor %}
-      <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
-      {{ form.username }}
-      <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
-      {{ form.password }}
-      <input type="hidden" name="next" value="{{ next }}">
-      <button type="submit">Sign in</button>
-    </form>
+  <div class="bg" aria-hidden="true">
+    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuGojv2buPiRCfbP63G6MUQ_DKaKCNj4MIwWesMDWVXbWhfMYQAJVH7JvOLTgZg_TepVyMfP0n6aWEZK_PXWHAy7KgS9Xxz7zLUXxSVibK0e5rAP7O1-horoXzQh_4zQGNOap4MM14sTs6ul6b6U9jlgIslEjW-upcIIovL65lpOyMjeq6QIP0iXuOwQwr_JUrTSByQgRYP8qPkoCkpMrZxagurxF5BOnlh5WEZYwAuPCC_gkj4daW35Qrajgw2vuFB6r8H8JLpiYr" alt="" referrerpolicy="no-referrer">
+  </div>
+
+  <main class="page">
+    <section class="brand">
+      <img class="crest" src="{% static 'account/img/logo-single.png' %}" alt="IT&amp;B crest logo">
+      <h1>IT&amp;B<br><span>Institutional</span><br>Prestige.</h1>
+      <p>Welcome to the unified digital experience for students and staff. Access your academic records, library resources, and institutional support securely.</p>
+      <div class="est"><small>EST</small><strong>2006</strong></div>
+    </section>
+
+    <section class="card">
+      <div class="head">
+        <img src="{% static 'account/img/logo-full.png' %}" alt="IT&amp;B" width="220" height="63">
+        <p class="eyebrow">Student Portal</p>
+        <p class="sub">{% if client_app_name %}Sign in to continue to <b>{{ client_app_name }}</b>{% else %}Sign in to continue{% endif %}</p>
+      </div>
+
+      <form method="post" novalidate id="login-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="error" role="alert">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+        {% endif %}
+
+        <div class="fields">
+          <div>
+            <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+            <div class="field">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M9 6V4h6v2"/><circle cx="9" cy="12" r="2"/><path d="M6 17c.6-1.5 1.7-2.2 3-2.2s2.4.7 3 2.2M15 11h3M15 14h3"/></svg>
+              {{ form.username }}
+            </div>
+          </div>
+          <div>
+            <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+            <div class="field">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></svg>
+              {{ form.password }}
+              <button type="button" class="toggle" id="pw-toggle" aria-label="Show password" aria-pressed="false" hidden>
+                <svg class="on" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="off" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.6 5.1A10.9 10.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.5M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.8 9.8 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <a class="forgot" href="{{ forgot_password_url }}">Forgot Password?</a>
+        </div>
+
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="submit" id="submit">
+          <span>Sign In</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+        </button>
+      </form>
+    </section>
   </main>
+
+  <script>
+    (function () {
+      var pw = document.getElementById("{{ form.password.id_for_label }}");
+      var toggle = document.getElementById("pw-toggle");
+      if (pw && toggle) {
+        pw.classList.add("pw");
+        toggle.hidden = false;
+        toggle.addEventListener("click", function () {
+          var show = pw.type === "password";
+          pw.type = show ? "text" : "password";
+          toggle.setAttribute("aria-pressed", String(show));
+          toggle.setAttribute("aria-label", show ? "Hide password" : "Show password");
+        });
+      }
+      var form = document.getElementById("login-form");
+      var submit = document.getElementById("submit");
+      form.addEventListener("submit", function () {
+        submit.disabled = true;
+        submit.querySelector("span").textContent = "Signing In...";
+      });
+    })();
+  </script>
 </body>
 </html>
