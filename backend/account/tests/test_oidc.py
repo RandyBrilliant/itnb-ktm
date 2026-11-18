@@ -77,6 +77,12 @@ class OidcProviderTests(TestCase):
         self.assertEqual(res.status_code, 302)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
 
+    def test_login_page_shows_form_when_already_signed_in(self):
+        self.client.force_login(self.user)
+        res = self.client.get("/accounts/login/", {"next": "/o/userinfo/"})
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "Sign in with ITNB Portal")
+
     def test_full_code_flow_returns_claims(self):
         self.client.force_login(self.user)
         res = self._authorize()

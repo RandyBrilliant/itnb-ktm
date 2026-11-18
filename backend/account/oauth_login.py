@@ -43,4 +43,6 @@ class PortalAuthenticationForm(AuthenticationForm):
 class PortalLoginView(LoginView):
     template_name = "account/oauth_login.html"
     authentication_form = PortalAuthenticationForm
-    redirect_authenticated_user = True
+    # Always show the form, even with an existing session, so a client app can
+    # send the user here to sign in again (or as someone else).
+    redirect_authenticated_user = False
