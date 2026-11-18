@@ -8,6 +8,7 @@ import { LoginCard } from "@/components/auth/login-card"
 import { AnimatedPage } from "@/components/animation/animated-page"
 import { getPostLoginRoute } from "@/lib/email-setup"
 import { resolveSafeNextPath } from "@/lib/webinar-attendance"
+import { RoleNotAllowedError } from "@/lib/auth-errors"
 
 /**
  * Login page for admin/staff/lecturer
@@ -16,7 +17,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const nextPath = resolveSafeNextPath(searchParams.get("next"))
-  const { login, logout, isLoading } = useAuth()
+  const { login, isLoading } = useAuth()
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -31,17 +32,19 @@ export function LoginPage() {
     }
 
     try {
-      const user = await login(identifier, password, { redirect: false })
-      if (user.role === "ADMIN") {
-        toast.info("Admin portal required", "Please sign in from /admin/login.")
-        setPassword("")
-        setError("Admin account must sign in from /admin/login.")
-        await logout({ redirectTo: "/admin/login", callApi: false })
-        return
-      }
+      const user = await login(identifier, password, {
+        redirect: false,
+        allowedRoles: ["STUDENT", "ALUMNI", "STAFF", "LECTURER"],
+      })
       toast.success("Login successful", "Redirecting to dashboard...")
       navigate(nextPath ?? getPostLoginRoute(user), { replace: true })
     } catch (err: unknown) {
+      if (err instanceof RoleNotAllowedError) {
+        setPassword("")
+        toast.info("Admin portal required", "Please sign in from /admin/login.")
+        navigate("/admin/login", { replace: true })
+        return
+      }
       const errorMessage = getUserFriendlyError(err, "login")
       setPassword("")
       setError(errorMessage)

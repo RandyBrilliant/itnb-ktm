@@ -73,6 +73,11 @@ from .services.email_delivery import EmailDeliveryError, ensure_outbound_email_c
 from .placeholder_email import user_requires_email_setup
 from .services.password_reset import send_password_reset_email_to_user
 from .services.student_import import build_student_import_workbook, parse_student_import_xlsx
+from .services.user_export import (
+    XLSX_CONTENT_TYPE,
+    build_user_export_workbook,
+    export_kind_for_roles,
+)
 from .services.student_photo_import import extract_photo_entries, normalize_avatar
 from .services.card_generation import (
     generate_digital_card_image,
@@ -644,6 +649,38 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action in ("update", "partial_update"):
             return UserAdminUpdateSerializer
         return UserDetailSerializer
+
+    @action(detail=False, methods=["get"], url_path="export")
+    def export(self, request):
+        """
+        Download the filtered records as .xlsx (admin only).
+
+        Takes the same filters as the list (role/roles, search, is_active, department,
+        intake_year) but is not paginated. Students and alumni, staff, or lecturers only.
+        """
+        params = request.query_params
+        raw_roles = params.get("roles") or params.get("role") or ""
+        roles = {r.strip() for r in raw_roles.split(",") if r.strip()}
+        kind = export_kind_for_roles(roles)
+        if kind is None:
+            return Response(
+                error_response(
+                    detail="Choose students/alumni, staff, or lecturers to export.",
+                    code=ApiCode.VALIDATION_ERROR,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        queryset = self.filter_queryset(
+            self.get_queryset().select_related("digital_card", "staff_profile", "lecturer_profile")
+        )
+        buf, filename = build_user_export_workbook(kind, queryset.iterator(chunk_size=500))
+
+        resp = HttpResponse(buf.getvalue(), content_type=XLSX_CONTENT_TYPE)
+        resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+        resp["Access-Control-Expose-Headers"] = "Content-Disposition"
+        resp["Cache-Control"] = "no-store"
+        return resp
 
     @action(detail=False, methods=["post"], permission_classes=[IsAdmin])
     def create_user(self, request):

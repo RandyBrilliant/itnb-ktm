@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/use-auth"
 import type { UserRole } from "@/types/auth"
 import { getDashboardRouteForRole } from "@/types/auth"
 import { getRequiredOnboardingRoute, isOnboardingRoute } from "@/lib/email-setup"
-import { logout as logoutApi } from "@/api/auth"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -20,15 +19,17 @@ export function ProtectedRoute({
   loginPath = "/login",
   allowedRoles,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, user, logout } = useAuth()
   const location = useLocation()
   const hasAccessToken = !!localStorage.getItem("access_token")
 
   useEffect(() => {
+    // Clear the whole session (tokens, cache, context state), not only the tokens;
+    // otherwise the context still reports the user as signed in.
     if (user && !user.is_active) {
-      void logoutApi()
+      void logout({ redirectTo: loginPath })
     }
-  }, [user])
+  }, [user, logout, loginPath])
 
   if (isLoading) {
     return (

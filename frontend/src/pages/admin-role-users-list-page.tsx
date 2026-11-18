@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom"
 import { Edit2, Plus, Search, Check, X } from "lucide-react"
 import { useUsersQuery } from "@/hooks/use-users-query"
 import { ActiveStatusBadge } from "@/components/admin/active-status-badge"
+import { ExportExcelButton } from "@/components/admin/export-excel-button"
 import { PersonNameBlock } from "@/components/profile/person-name-block"
 import {
   DIRECTORY_ROLE_LABELS,
@@ -16,19 +17,23 @@ export function AdminRoleUsersListPage() {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
 
+  // Hooks must run on every render, so the query is disabled (not skipped) for an unknown segment.
+  const { data: usersData, isLoading } = useUsersQuery(
+    {
+      search: search || undefined,
+      role: role ?? undefined,
+      page,
+      page_size: 20,
+    },
+    { enabled: !!role }
+  )
+
   if (!role) {
     return <Navigate to="/admin/dashboard" replace />
   }
 
   const labels = DIRECTORY_ROLE_LABELS[role]
   const pathSegment = directoryRoleToSegment(role)
-
-  const { data: usersData, isLoading } = useUsersQuery({
-    search: search || undefined,
-    role,
-    page,
-    page_size: 20,
-  })
 
   return (
     <div className="space-y-8">
@@ -38,13 +43,22 @@ export function AdminRoleUsersListPage() {
           <h1 className="font-[var(--font-heading)] text-4xl font-extrabold text-[#1a1c1c]">{labels.listTitle}</h1>
           <p className="mt-1 text-sm text-[#5f5e5e]">{labels.listSubtitle}</p>
         </div>
-        <Link
-          to={`/admin/users/${pathSegment}/new`}
-          className="flex items-center gap-2 bg-[#af0f24] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#930019]"
-        >
-          <Plus size={20} />
-          New record
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {role !== "ADMIN" ? (
+            <ExportExcelButton
+              filters={{ role, search: search || undefined }}
+              fallbackFilename={role === "STAFF" ? "staff_records" : "lecturer_records"}
+              disabled={!isLoading && !usersData?.count}
+            />
+          ) : null}
+          <Link
+            to={`/admin/users/${pathSegment}/new`}
+            className="flex items-center gap-2 bg-[#af0f24] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#930019]"
+          >
+            <Plus size={20} />
+            New record
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-4 rounded-sm border border-[#e2e2e2] bg-white p-4 shadow-[32px_0_32px_rgba(175,15,36,0.04)]">

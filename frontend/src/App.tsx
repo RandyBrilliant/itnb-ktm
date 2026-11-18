@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
+import { GuestRoute } from "@/components/guest-route"
 import { AppToaster } from "@/components/ui/app-toaster"
 
 const AdminLayout = lazy(() => import("@/components/admin-layout").then((m) => ({ default: m.AdminLayout })))
@@ -107,9 +108,10 @@ function App() {
           >
             <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            {/* Signed-in users are sent to their dashboard instead of the login pages. */}
+            <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+            <Route path="/admin/login" element={<GuestRoute><AdminLoginPage /></GuestRoute>} />
+            <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-card/:cardNumber" element={<VerifyCardPage />} />
             <Route

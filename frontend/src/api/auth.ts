@@ -102,8 +102,11 @@ export async function refreshToken(): Promise<string> {
  * POST /api/auth/logout/ - Logout
  */
 export async function logout(): Promise<void> {
+  const refresh = localStorage.getItem("refresh_token")
   try {
-    await api.post("/api/auth/logout/")
+    // Send the refresh token so the backend can blacklist it; without it the
+    // session stays usable server-side until the refresh token expires.
+    await api.post("/api/auth/logout/", refresh ? { refresh } : {})
   } catch {
     // Some deployments do not expose logout endpoint; local cleanup still signs out.
   }

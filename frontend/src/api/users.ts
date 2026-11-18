@@ -193,6 +193,22 @@ export async function downloadStudentImportTemplate(): Promise<Blob> {
 }
 
 /**
+ * GET /api/users/export/ — download the filtered records as .xlsx.
+ * Takes the same filters as the list (pagination is ignored).
+ */
+export async function exportUsersToExcel(
+  filters: Omit<UserFilters, "page" | "page_size">
+): Promise<{ blob: Blob; filename: string | null }> {
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value !== undefined && value !== null && value !== "")
+  )
+  const response = await api.get("/api/users/export/", { params, responseType: "blob" })
+  const disposition = String(response.headers["content-disposition"] ?? "")
+  const filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? null
+  return { blob: response.data as Blob, filename }
+}
+
+/**
  * POST /api/users/import-students/ — bulk-create student accounts from .xlsx.
  */
 export async function importStudentsFromExcel(file: File): Promise<StudentImportResult> {

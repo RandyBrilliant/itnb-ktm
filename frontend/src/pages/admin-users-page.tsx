@@ -7,6 +7,7 @@ import {
   importStudentPhotosFromZip,
 } from "@/api/users"
 import { ActiveStatusBadge } from "@/components/admin/active-status-badge"
+import { ExportExcelButton } from "@/components/admin/export-excel-button"
 import { PersonNameBlock } from "@/components/profile/person-name-block"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
@@ -37,7 +38,7 @@ export function AdminUsersPage() {
   const [photoImporting, setPhotoImporting] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
-  const { data: usersData, isLoading, refetch } = useUsersQuery({
+  const listFilters = {
     search: search || undefined,
     ...(recordRoleScope === "both"
       ? { roles: "STUDENT,ALUMNI" }
@@ -49,6 +50,10 @@ export function AdminUsersPage() {
         ? { is_active: false }
         : {}),
     intake_year: intakeYearFilter ? Number(intakeYearFilter) : undefined,
+  }
+
+  const { data: usersData, isLoading, refetch } = useUsersQuery({
+    ...listFilters,
     page,
     page_size: 20,
   })
@@ -133,12 +138,19 @@ export function AdminUsersPage() {
           </p>
         </div>
         <div className="flex max-w-md flex-col items-end gap-3 text-right">
-          <Link
-            to="/admin/users/record/new"
-            className="inline-flex items-center justify-center bg-[#af0f24] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#930019]"
-          >
-            New record
-          </Link>
+          <div className="flex flex-wrap justify-end gap-2">
+            <ExportExcelButton
+              filters={listFilters}
+              fallbackFilename="student_records"
+              disabled={!isLoading && !usersData?.count}
+            />
+            <Link
+              to="/admin/users/record/new"
+              className="inline-flex items-center justify-center bg-[#af0f24] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#930019]"
+            >
+              New record
+            </Link>
+          </div>
           <p className="text-sm text-[#5f5e5e]">
             To add administrators, staff, or lecturers, use Administrator Records, Staff Records, or Lecturer Records in
             the sidebar.

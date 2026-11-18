@@ -4,10 +4,11 @@ import { useAuth } from "@/hooks/use-auth"
 import { toast } from "@/lib/toast"
 import { getUserFriendlyError } from "@/lib/error-message"
 import { AnimatedPage } from "@/components/animation/animated-page"
+import { RoleNotAllowedError } from "@/lib/auth-errors"
 
 export function AdminLoginPage() {
   const navigate = useNavigate()
-  const { login, logout, isLoading } = useAuth()
+  const { login, isLoading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -30,17 +31,16 @@ export function AdminLoginPage() {
     }
 
     try {
-      const user = await login(email, password, { redirect: false })
-      if (user.role !== "ADMIN") {
-        toast.info("Public portal required", "Please sign in from /login.")
-        setPassword("")
-        setError("This portal is only for admin accounts.")
-        await logout({ redirectTo: "/login", callApi: false })
-        return
-      }
+      await login(email, password, { redirect: false, allowedRoles: ["ADMIN"] })
       toast.success("Admin login successful", "Redirecting to dashboard...")
       navigate("/admin/dashboard", { replace: true })
     } catch (err: unknown) {
+      if (err instanceof RoleNotAllowedError) {
+        setPassword("")
+        toast.info("Public portal required", "Please sign in from /login.")
+        navigate("/login", { replace: true })
+        return
+      }
       const errorMessage = getUserFriendlyError(err, "admin-login")
       setPassword("")
       setError(errorMessage)
