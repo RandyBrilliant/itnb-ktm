@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Sign in · ITNB Portal</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f5f6f8; --card:#fff; --fg:#111827; --muted:#6b7280; --line:#d1d5db; --accent:#1d4ed8; --err:#b91c1c; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0b0f17; --card:#111827; --fg:#f3f4f6; --muted:#9ca3af; --line:#374151; --accent:#60a5fa; --err:#f87171; } }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:16px; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { width:100%; max-width:380px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:28px; }
+    h1 { margin:0 0 4px; font-size:1.25rem; }
+    p.sub { margin:0 0 20px; color:var(--muted); font-size:.9rem; }
+    label { display:block; font-size:.875rem; font-weight:600; margin:14px 0 6px; }
+    input[type=text], input[type=password] { width:100%; padding:10px 12px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
+    input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+    button { width:100%; margin-top:22px; padding:11px; font:inherit; font-weight:600; color:#fff; background:var(--accent); border:0; border-radius:8px; cursor:pointer; }
+    .err { color:var(--err); font-size:.875rem; margin:0 0 8px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Sign in with ITNB Portal</h1>
+    <p class="sub">Use your portal email or NIM and password.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for error in form.non_field_errors %}<p class="err">{{ error }}</p>{% endfor %}
+      <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+      {{ form.username }}
+      <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+      {{ form.password }}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit">Sign in</button>
+    </form>
+  </main>
+</body>
+</html>

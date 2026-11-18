@@ -14,6 +14,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
 from account.throttles import AuthRateThrottle
+from django.contrib.auth.views import LogoutView
+from account.oauth_login import PortalLoginView
 from account.views import HealthCheckView, HubTokenObtainPairView
 
 
@@ -45,7 +47,16 @@ urlpatterns = [
     path("api/auth/token/", HubTokenObtainPairView.as_view(), name="auth_token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="auth_token_refresh"),
     path("health/", HealthCheckView.as_view(), name="health"),
-    
+
+    # OAuth2 / OpenID Connect provider ("Sign in with ITNB Portal") + its session login
+    path("o/", include("oauth2_provider.urls", namespace="oauth2_provider")),
+    path(
+        "accounts/login/",
+        _throttle_login_attempts(PortalLoginView.as_view()),
+        name="login",
+    ),
+    path("accounts/logout/", LogoutView.as_view(), name="logout"),
+
     # Account app (users, profiles, certificates, etc.)
     path("api/", include("account.urls")),
     

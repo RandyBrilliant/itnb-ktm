@@ -154,7 +154,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'channels',
-    
+    'oauth2_provider',
+
     # Local apps
     'account.apps.AccountConfig',
     'main.apps.MainConfig',
@@ -350,6 +351,66 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+}
+
+
+# ---------------------------------------------------------------------------
+# OAuth2 / OpenID Connect provider ("Sign in with ITNB Portal")
+# Endpoints under /o/ — discovery: /o/.well-known/openid-configuration
+# ---------------------------------------------------------------------------
+
+# Session login used by /o/authorize/ (the SPA itself uses JWTs).
+LOGIN_URL = "/accounts/login/"
+
+
+def _oidc_rsa_private_key() -> str:
+    """PEM key that signs ID tokens: OIDC_RSA_PRIVATE_KEY (\\n-escaped) or OIDC_RSA_PRIVATE_KEY_FILE."""
+    key = (get_env("OIDC_RSA_PRIVATE_KEY") or "").replace("\\n", "\n").strip()
+    key_file = get_env("OIDC_RSA_PRIVATE_KEY_FILE")
+    if not key and key_file:
+        key = Path(key_file).read_text().strip()
+    if not key and (DEBUG or "test" in sys.argv):
+        # Dev/test only: throwaway key, so ID tokens stop validating after a restart.
+        from jwcrypto import jwk
+
+        key = jwk.JWK.generate(kty="RSA", size=2048).export_to_pem(
+            private_key=True, password=None
+        ).decode()
+    return key
+
+
+OIDC_RSA_PRIVATE_KEY = _oidc_rsa_private_key()
+if not OIDC_RSA_PRIVATE_KEY:
+    import warnings
+
+    warnings.warn(
+        "OIDC_RSA_PRIVATE_KEY is not set; OpenID Connect (Sign in with ITNB Portal) is disabled."
+    )
+
+from account.oidc_pkce import pkce_required  # noqa: E402
+
+OAUTH2_PROVIDER = {
+    "OIDC_ENABLED": bool(OIDC_RSA_PRIVATE_KEY),
+    "OIDC_RSA_PRIVATE_KEY": OIDC_RSA_PRIVATE_KEY,
+    "OIDC_RP_INITIATED_LOGOUT_ENABLED": True,
+    "OAUTH2_VALIDATOR_CLASS": "account.oidc.PortalOAuth2Validator",
+    "PKCE_REQUIRED": pkce_required,
+    "ALLOWED_REDIRECT_URI_SCHEMES": ["https"] if not DEBUG else ["http", "https"],
+    "SCOPES": {
+        "openid": "OpenID Connect sign-in",
+        "profile": "Name, NIM, major and role",
+        "email": "Email address",
+    },
+    "DEFAULT_SCOPES": ["openid"],
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
+    # OAuth 2.0 Security BCP (RFC 9700) behavior — the django-oauth-toolkit 4.0 defaults.
+    "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
+    "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
+    "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
+    "COMPLIANT_BCP_RFC9700_TOKEN_STORAGE": True,
+    "REFRESH_TOKEN_REUSE_PROTECTION": True,
 }
 
 
